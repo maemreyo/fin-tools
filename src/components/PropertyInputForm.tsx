@@ -1,3 +1,4 @@
+// src/components/PropertyInputForm.tsx - FIXED VALIDATION & REAL-TIME CALC
 "use client";
 
 import React from "react";
@@ -14,7 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Tooltip,
   TooltipContent,
@@ -27,58 +32,71 @@ import { Slider } from "@/components/ui/slider";
 import {
   HelpCircle,
   Home,
-  PiggyBank,
+  ChevronDown,
+  ChevronUp,
+  Calculator,
+  DollarSign,
   CreditCard,
   Settings,
-  User,
-  Calculator,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 import { RealEstateInputs, DEFAULT_VALUES } from "@/types/real-estate";
 import { formatVND, parseVND } from "@/lib/financial-utils";
 
-// Validation schema với Zod
+// SIMPLIFIED validation schema - chỉ validate những field thực sự critical
 const realEstateSchema = z.object({
-  // Giao dịch
+  // Core required fields only
   giaTriBDS: z
     .number()
-    .min(100000000, "Giá trị BĐS phải ít nhất 100 triệu VNĐ"),
-  chiPhiTrangBi: z.number().min(0, "Chi phí trang bị không được âm"),
-
-  // Vốn ban đầu
-  tyLeVay: z.number().min(0).max(100, "Tỷ lệ vay phải từ 0-100%"),
-  chiPhiMua: z.number().min(0).max(10, "Chi phí mua phải từ 0-10%"),
-  baoHiemKhoanVay: z.number().min(0).max(5, "Bảo hiểm khoản vay phải từ 0-5%"),
-
-  // Vay vốn
-  laiSuatUuDai: z.number().min(0).max(50, "Lãi suất ưu đãi phải từ 0-50%"),
-  thoiGianUuDai: z
+    .min(100000000, "Giá trị BĐS phải ít nhất 100 triệu VNĐ")
+    .optional()
+    .or(z.literal(0)),
+  tienThueThang: z
+    .number()
+    .min(0, "Tiền thuê tháng không được âm")
+    .optional()
+    .or(z.literal(0)),
+  tyLeVay: z
     .number()
     .min(0)
-    .max(60, "Thời gian ưu đãi phải từ 0-60 tháng"),
-  laiSuatThaNoi: z.number().min(0).max(50, "Lãi suất thả nổi phải từ 0-50%"),
-  thoiGianVay: z.number().min(1).max(30, "Thời gian vay phải từ 1-30 năm"),
-
-  // Vận hành
-  tienThueThang: z.number().min(0, "Tiền thuê tháng không được âm"),
-  phiQuanLy: z.number().min(0, "Phí quản lý không được âm"),
-  baoHiemTaiSan: z.number().min(0).max(2, "Bảo hiểm tài sản phải từ 0-2%"),
-
-  // Dự phòng
-  tyLeLapDay: z.number().min(0).max(100, "Tỷ lệ lấp đầy phải từ 0-100%"),
-  phiBaoTri: z.number().min(0).max(5, "Phí bảo trì phải từ 0-5%"),
-  duPhongCapEx: z.number().min(0).max(5, "Dự phòng CapEx phải từ 0-5%"),
-
-  // Thuế
-  thueSuatChoThue: z
+    .max(100, "Tỷ lệ vay phải từ 0-100%")
+    .optional()
+    .or(z.literal(0)),
+  laiSuatUuDai: z
     .number()
     .min(0)
-    .max(50, "Thuế suất cho thuê phải từ 0-50%"),
-  chiPhiBan: z.number().min(0).max(10, "Chi phí bán phải từ 0-10%"),
+    .max(50, "Lãi suất ưu đãi phải từ 0-50%")
+    .optional()
+    .or(z.literal(0)),
+  laiSuatThaNoi: z
+    .number()
+    .min(0)
+    .max(50, "Lãi suất thả nổi phải từ 0-50%")
+    .optional()
+    .or(z.literal(0)),
+  thoiGianVay: z
+    .number()
+    .min(1)
+    .max(30, "Thời gian vay phải từ 1-30 năm")
+    .optional()
+    .or(z.literal(0)),
 
-  // Tài chính cá nhân
-  thuNhapKhac: z.number().min(0, "Thu nhập khác không được âm"),
-  chiPhiSinhHoat: z.number().min(0, "Chi phí sinh hoạt không được âm"),
+  // All other fields are optional và có defaults
+  chiPhiTrangBi: z.number().optional().default(0),
+  chiPhiMua: z.number().optional().default(2),
+  baoHiemKhoanVay: z.number().optional().default(1.5),
+  thoiGianUuDai: z.number().optional().default(12),
+  phiQuanLy: z.number().optional().default(0),
+  baoHiemTaiSan: z.number().optional().default(0.1),
+  tyLeLapDay: z.number().optional().default(95),
+  phiBaoTri: z.number().optional().default(1),
+  duPhongCapEx: z.number().optional().default(1),
+  thueSuatChoThue: z.number().optional().default(10),
+  chiPhiBan: z.number().optional().default(3),
+  thuNhapKhac: z.number().optional().default(0),
+  chiPhiSinhHoat: z.number().optional().default(0),
 });
 
 interface PropertyInputFormProps {
@@ -87,87 +105,7 @@ interface PropertyInputFormProps {
   isLoading?: boolean;
 }
 
-// Tooltips hướng dẫn cho từng trường
-const tooltips = {
-  giaTriBDS: {
-    title: "Giá trị bất động sản",
-    content:
-      "Giá mua chính thức ghi trong hợp đồng. VD: Căn hộ 2PN tại Q7 giá 3.5 tỷ VNĐ",
-    example: "3,500,000,000 VNĐ",
-  },
-  chiPhiTrangBi: {
-    title: "Chi phí trang bị",
-    content:
-      "Tiền sửa chữa, mua nội thất để có thể ở hoặc cho thuê. Không bắt buộc nếu nhà đã hoàn thiện",
-    example: "50,000,000 VNĐ",
-  },
-  tyLeVay: {
-    title: "Tỷ lệ vay ngân hàng",
-    content:
-      "Ngân hàng thường cho vay 70-80% giá trị BĐS. Tỷ lệ càng cao, áp lực tài chính càng lớn",
-    example: "70% (vay 2.45 tỷ, tự có 1.05 tỷ)",
-  },
-  laiSuatUuDai: {
-    title: "Lãi suất ưu đãi",
-    content: "Lãi suất thấp trong giai đoạn đầu. Hiện tại khoảng 6-9%/năm",
-    example: "8%/năm",
-  },
-  thoiGianUuDai: {
-    title: "Thời gian ưu đãi",
-    content: "Thời gian hưởng lãi suất thấp, thường 6-24 tháng đầu",
-    example: "12 tháng",
-  },
-  laiSuatThaNoi: {
-    title: "Lãi suất thả nổi",
-    content: "Lãi suất sau ưu đãi, thường cao hơn 3-4% so với ưu đãi",
-    example: "12%/năm",
-  },
-  tienThueThang: {
-    title: "Tiền thuê hàng tháng",
-    content:
-      "Thu nhập cho thuê thực tế. Xem giá thị trường xung quanh để ước tính",
-    example: "15,000,000 VNĐ/tháng",
-  },
-  tyLeLapDay: {
-    title: "Tỷ lệ lấp đầy",
-    content: "% thời gian có khách thuê trong năm. Thường 90-98% tùy vị trí",
-    example: "95% (trống 18 ngày/năm)",
-  },
-};
-
-const FieldTooltip: React.FC<{
-  field: keyof typeof tooltips;
-  children: React.ReactNode;
-}> = ({ field, children }) => {
-  const tooltip = tooltips[field];
-  if (!tooltip) return <>{children}</>;
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 cursor-help">
-            {children}
-            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-sm">
-          <div className="space-y-2">
-            <p className="font-semibold">{tooltip.title}</p>
-            <p className="text-sm">{tooltip.content}</p>
-            {tooltip.example && (
-              <p className="text-xs bg-muted p-2 rounded">
-                <strong>Ví dụ:</strong> {tooltip.example}
-              </p>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
-
-// Component cho input số tiền VNĐ
+// Currency Input Component - ENHANCED
 const CurrencyInput: React.FC<{
   value: number;
   onChange: (value: number) => void;
@@ -187,8 +125,10 @@ const CurrencyInput: React.FC<{
     onChange(numericValue);
   };
 
+  // Sync với external value changes
   React.useEffect(() => {
-    if (value !== parseVND(displayValue)) {
+    const parsed = parseVND(displayValue);
+    if (value !== parsed && !isNaN(value)) {
       setDisplayValue(value ? value.toLocaleString("vi-VN") : "");
     }
   }, [value]);
@@ -209,46 +149,26 @@ const CurrencyInput: React.FC<{
   );
 };
 
-// Component cho percentage input với slider
+// Percentage Input Component - SIMPLIFIED
 const PercentageInput: React.FC<{
   value: number;
   onChange: (value: number) => void;
   min?: number;
   max?: number;
   step?: number;
-  showSlider?: boolean;
-}> = ({
-  value,
-  onChange,
-  min = 0,
-  max = 100,
-  step = 0.1,
-  showSlider = true,
-}) => {
+}> = ({ value, onChange, min = 0, max = 100, step = 0.1 }) => {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          value={value || ""}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          min={min}
-          max={max}
-          step={step}
-          className="w-24"
-        />
-        <span className="text-sm text-muted-foreground">%</span>
-      </div>
-      {showSlider && (
-        <Slider
-          value={[value]}
-          onValueChange={(values) => onChange(values[0])}
-          min={min}
-          max={max}
-          step={step}
-          className="w-full"
-        />
-      )}
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        value={value || ""}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        min={min}
+        max={max}
+        step={step}
+        className="w-20"
+      />
+      <span className="text-sm text-muted-foreground">%</span>
     </div>
   );
 };
@@ -263,459 +183,567 @@ export default function PropertyInputForm({
     defaultValues: {
       ...DEFAULT_VALUES,
       ...initialValues,
-    } as RealEstateInputs,
+    },
+    mode: "onChange", // Enable real-time validation
   });
 
   const [showAdvanced, setShowAdvanced] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState("basic");
+  const [showPersonal, setShowPersonal] = React.useState(false);
 
   const watchedValues = form.watch();
+  const {
+    formState: { errors, isDirty },
+  } = form;
 
-  // Tính toán một số giá trị phụ để hiển thị
+  // ENHANCED calculated values với ALL dependencies và comprehensive calculations
   const calculatedValues = React.useMemo(() => {
-    const soTienVay = watchedValues.giaTriBDS * (watchedValues.tyLeVay / 100);
-    const vonTuCo = watchedValues.giaTriBDS - soTienVay;
-    const monthlyPayment =
-      soTienVay > 0 ? soTienVay * (watchedValues.laiSuatUuDai / 100 / 12) : 0;
+    const giaTriBDS = watchedValues.giaTriBDS || 0;
+    const tyLeVay = watchedValues.tyLeVay || 0;
+    const laiSuatUuDai = watchedValues.laiSuatUuDai || 0;
+    const laiSuatThaNoi = watchedValues.laiSuatThaNoi || 0;
+    const thoiGianVay = watchedValues.thoiGianVay || 0;
+    const thoiGianUuDai = watchedValues.thoiGianUuDai || 0;
+    const tienThueThang = watchedValues.tienThueThang || 0;
+    const tyLeLapDay = watchedValues.tyLeLapDay || 95;
+    const phiQuanLy = watchedValues.phiQuanLy || 0;
+    const phiBaoTri = watchedValues.phiBaoTri || 1;
+    const baoHiemTaiSan = watchedValues.baoHiemTaiSan || 0.1;
+    const chiPhiTrangBi = watchedValues.chiPhiTrangBi || 0;
+    const chiPhiMua = watchedValues.chiPhiMua || 2;
+
+    // Basic calculations
+    const soTienVay = giaTriBDS * (tyLeVay / 100);
+    const vonTuCo = giaTriBDS - soTienVay + chiPhiTrangBi;
+    const chiPhiMuaBDS = giaTriBDS * (chiPhiMua / 100);
+    const tongVonBanDau = vonTuCo + chiPhiMuaBDS;
+
+    // Monthly payment calculation (simplified PMT formula)
+    const monthlyInterestRate = laiSuatUuDai / 100 / 12;
+    const totalPayments = thoiGianVay * 12;
+
+    let monthlyPayment = 0;
+    if (soTienVay > 0 && monthlyInterestRate > 0) {
+      monthlyPayment =
+        (soTienVay *
+          (monthlyInterestRate *
+            Math.pow(1 + monthlyInterestRate, totalPayments))) /
+        (Math.pow(1 + monthlyInterestRate, totalPayments) - 1);
+    }
+
+    // Operating expenses
+    const thuNhapThueHieuDung = tienThueThang * (tyLeLapDay / 100);
+    const chiPhiBaoTriThang = (giaTriBDS * phiBaoTri) / 100 / 12;
+    const baoHiemTaiSanThang = (giaTriBDS * baoHiemTaiSan) / 100 / 12;
+    const tongChiPhiVanHanh =
+      monthlyPayment + phiQuanLy + chiPhiBaoTriThang + baoHiemTaiSanThang;
+
+    // Net cash flow
+    const dongTienRongBDS = thuNhapThueHieuDung - tongChiPhiVanHanh;
+
+    // ROI calculation
+    const roiHangNam =
+      tongVonBanDau > 0 ? ((dongTienRongBDS * 12) / tongVonBanDau) * 100 : 0;
+
+    // Rental yield
+    const rentalYield =
+      giaTriBDS > 0 ? ((tienThueThang * 12) / giaTriBDS) * 100 : 0;
 
     return {
       soTienVay,
       vonTuCo,
-      monthlyPayment: monthlyPayment * 1.2, // Rough estimate
+      tongVonBanDau,
+      monthlyPayment,
+      thuNhapThueHieuDung,
+      dongTienRongBDS,
+      roiHangNam,
+      rentalYield,
+      canCalculate:
+        giaTriBDS > 0 &&
+        tienThueThang > 0 &&
+        laiSuatUuDai > 0 &&
+        thoiGianVay > 0,
     };
-  }, [watchedValues]);
+  }, [
+    watchedValues.giaTriBDS,
+    watchedValues.tyLeVay,
+    watchedValues.laiSuatUuDai,
+    watchedValues.laiSuatThaNoi,
+    watchedValues.thoiGianVay,
+    watchedValues.thoiGianUuDai,
+    watchedValues.tienThueThang,
+    watchedValues.tyLeLapDay,
+    watchedValues.phiQuanLy,
+    watchedValues.phiBaoTri,
+    watchedValues.baoHiemTaiSan,
+    watchedValues.chiPhiTrangBi,
+    watchedValues.chiPhiMua,
+  ]);
+
+  // Apply initial values when they change (for preset loading)
+  React.useEffect(() => {
+    if (initialValues) {
+      Object.entries(initialValues).forEach(([key, value]) => {
+        if (value !== undefined) {
+          form.setValue(key as keyof RealEstateInputs, value);
+        }
+      });
+    }
+  }, [initialValues, form]);
 
   const onSubmit = (data: RealEstateInputs) => {
-    onCalculate(data);
+    console.log("Form submitted with data:", data);
+
+    // Fill in any missing values with defaults
+    const completeData = {
+      ...DEFAULT_VALUES,
+      ...data,
+    };
+
+    try {
+      onCalculate(completeData);
+    } catch (error) {
+      console.error("Error in onCalculate:", error);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form submit triggered");
+    console.log("Can calculate:", calculatedValues.canCalculate);
+    console.log("Form errors:", errors);
+
+    form.handleSubmit(onSubmit, (errors) => {
+      console.log("Form validation errors:", errors);
+    })();
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid gap-6">
-        {/* Header với thông tin tổng quan */}
-        <Card>
+    <TooltipProvider>
+      <form onSubmit={handleFormSubmit} className="space-y-6">
+        {/* ENHANCED Quick Preview Card với monthly payment */}
+        <Card className="border-primary/20 bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calculator className="h-5 w-5" />
-              Tính Toán Đầu Tư Bất Động Sản
+              Tổng Quan Đầu Tư
             </CardTitle>
-            <CardDescription>
-              Nhập thông tin để phân tích khả năng sinh lời của bất động sản
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                 <p className="text-sm text-muted-foreground">Giá trị BĐS</p>
-                <p className="text-lg font-semibold text-blue-600">
+                <p className="text-xl font-bold text-blue-600">
                   {formatVND(watchedValues.giaTriBDS || 0)}
                 </p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                 <p className="text-sm text-muted-foreground">Vốn tự có</p>
-                <p className="text-lg font-semibold text-green-600">
-                  {formatVND(calculatedValues.vonTuCo || 0)}
+                <p className="text-xl font-bold text-green-600">
+                  {formatVND(calculatedValues.vonTuCo)}
                 </p>
               </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                 <p className="text-sm text-muted-foreground">Số tiền vay</p>
-                <p className="text-lg font-semibold text-orange-600">
-                  {formatVND(calculatedValues.soTienVay || 0)}
+                <p className="text-xl font-bold text-orange-600">
+                  {formatVND(calculatedValues.soTienVay)}
+                </p>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                <p className="text-sm text-muted-foreground">Trả NH/tháng</p>
+                <p className="text-xl font-bold text-red-600">
+                  {formatVND(calculatedValues.monthlyPayment)}
                 </p>
               </div>
             </div>
+
+            {/* ADDED: Quick metrics preview */}
+            {calculatedValues.canCalculate && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-white/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    Dòng tiền/tháng
+                  </p>
+                  <p
+                    className={`text-lg font-bold ${
+                      calculatedValues.dongTienRongBDS > 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {formatVND(calculatedValues.dongTienRongBDS)}
+                  </p>
+                </div>
+                <div className="text-center p-3 bg-white/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">ROI năm</p>
+                  <p
+                    className={`text-lg font-bold ${
+                      calculatedValues.roiHangNam > 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {calculatedValues.roiHangNam.toFixed(1)}%
+                  </p>
+                </div>
+                <div className="text-center p-3 bg-white/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">Rental Yield</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {calculatedValues.rentalYield.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Main Input Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="basic" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              Cơ bản
-            </TabsTrigger>
-            <TabsTrigger value="loan" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Vay vốn
-            </TabsTrigger>
-            <TabsTrigger value="rental" className="flex items-center gap-2">
-              <PiggyBank className="h-4 w-4" />
-              Cho thuê
-            </TabsTrigger>
-            <TabsTrigger value="costs" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Chi phí
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Cá nhân
-            </TabsTrigger>
-          </TabsList>
+        {/* Core Information - ENHANCED SINGLE LAYOUT */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Home className="h-5 w-5" />
+              Thông Tin Cơ Bản
+            </CardTitle>
+            <CardDescription>
+              Các thông tin cần thiết để tính toán dòng tiền
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Property & Rental */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg">Bất Động Sản</h4>
 
-          {/* Tab 1: Thông tin cơ bản */}
-          <TabsContent value="basic" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Thông Tin Bất Động Sản</CardTitle>
-                <CardDescription>
-                  Nhập giá mua và chi phí ban đầu
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <FieldTooltip field="giaTriBDS">
-                    <Label htmlFor="giaTriBDS">Giá trị bất động sản *</Label>
-                  </FieldTooltip>
+                  <Label htmlFor="giaTriBDS">Giá trị BĐS</Label>
                   <CurrencyInput
                     value={watchedValues.giaTriBDS || 0}
                     onChange={(value) => form.setValue("giaTriBDS", value)}
                     placeholder="VD: 3,500,000,000"
                   />
-                  {form.formState.errors.giaTriBDS && (
-                    <p className="text-sm text-red-500">
-                      {form.formState.errors.giaTriBDS.message}
+                  {errors.giaTriBDS && (
+                    <p className="text-sm text-red-600">
+                      {errors.giaTriBDS.message}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <FieldTooltip field="chiPhiTrangBi">
-                    <Label htmlFor="chiPhiTrangBi">
-                      Chi phí trang bị ban đầu
-                    </Label>
-                  </FieldTooltip>
+                  <Label htmlFor="tienThueThang">Tiền thuê hàng tháng</Label>
+                  <CurrencyInput
+                    value={watchedValues.tienThueThang || 0}
+                    onChange={(value) => form.setValue("tienThueThang", value)}
+                    placeholder="VD: 25,000,000"
+                  />
+                  {errors.tienThueThang && (
+                    <p className="text-sm text-red-600">
+                      {errors.tienThueThang.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="chiPhiTrangBi">Chi phí trang bị</Label>
                   <CurrencyInput
                     value={watchedValues.chiPhiTrangBi || 0}
                     onChange={(value) => form.setValue("chiPhiTrangBi", value)}
                     placeholder="VD: 50,000,000"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg">Vay Vốn</h4>
 
                 <div className="space-y-2">
-                  <FieldTooltip field="tyLeVay">
-                    <Label htmlFor="tyLeVay">Tỷ lệ vay ngân hàng</Label>
-                  </FieldTooltip>
-                  <PercentageInput
-                    value={watchedValues.tyLeVay || 0}
-                    onChange={(value) => form.setValue("tyLeVay", value)}
-                    max={90}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab 2: Thông tin vay vốn */}
-          <TabsContent value="loan" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Thông Tin Khoản Vay</CardTitle>
-                <CardDescription>Lãi suất và thời gian vay</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Label htmlFor="tyLeVay">Tỷ lệ vay (%)</Label>
                   <div className="space-y-2">
-                    <FieldTooltip field="laiSuatUuDai">
-                      <Label htmlFor="laiSuatUuDai">
-                        Lãi suất ưu đãi (%/năm)
-                      </Label>
-                    </FieldTooltip>
                     <PercentageInput
-                      value={watchedValues.laiSuatUuDai || 0}
-                      onChange={(value) => form.setValue("laiSuatUuDai", value)}
-                      max={20}
-                      step={0.1}
+                      value={watchedValues.tyLeVay || 0}
+                      onChange={(value) => form.setValue("tyLeVay", value)}
+                      max={100}
+                    />
+                    <Slider
+                      value={[watchedValues.tyLeVay || 0]}
+                      onValueChange={(values) =>
+                        form.setValue("tyLeVay", values[0])
+                      }
+                      max={100}
+                      step={5}
+                      className="w-full"
                     />
                   </div>
+                </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="laiSuatUuDai">Lãi suất ưu đãi (%/năm)</Label>
+                  <PercentageInput
+                    value={watchedValues.laiSuatUuDai || 0}
+                    onChange={(value) => form.setValue("laiSuatUuDai", value)}
+                    max={50}
+                    step={0.1}
+                  />
+                  {errors.laiSuatUuDai && (
+                    <p className="text-sm text-red-600">
+                      {errors.laiSuatUuDai.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="laiSuatThaNoi">
+                    Lãi suất thả nổi (%/năm)
+                  </Label>
+                  <PercentageInput
+                    value={watchedValues.laiSuatThaNoi || 0}
+                    onChange={(value) => form.setValue("laiSuatThaNoi", value)}
+                    max={50}
+                    step={0.1}
+                  />
+                  {errors.laiSuatThaNoi && (
+                    <p className="text-sm text-red-600">
+                      {errors.laiSuatThaNoi.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="thoiGianVay">Thời gian vay (năm)</Label>
+                  <Input
+                    type="number"
+                    value={watchedValues.thoiGianVay || ""}
+                    onChange={(e) =>
+                      form.setValue(
+                        "thoiGianVay",
+                        parseFloat(e.target.value) || 0
+                      )
+                    }
+                    min={1}
+                    max={30}
+                    className="w-24"
+                    placeholder="20"
+                  />
+                  {errors.thoiGianVay && (
+                    <p className="text-sm text-red-600">
+                      {errors.thoiGianVay.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Advanced Options - COLLAPSIBLE */}
+            <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 p-0">
+                  <Settings className="h-4 w-4" />
+                  Tùy chọn nâng cao
+                  {showAdvanced ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <FieldTooltip field="thoiGianUuDai">
-                      <Label htmlFor="thoiGianUuDai">
-                        Thời gian ưu đãi (tháng)
-                      </Label>
-                    </FieldTooltip>
+                    <Label htmlFor="thoiGianUuDai">
+                      Thời gian ưu đãi (tháng)
+                    </Label>
                     <Input
                       type="number"
                       value={watchedValues.thoiGianUuDai || ""}
                       onChange={(e) =>
                         form.setValue(
                           "thoiGianUuDai",
-                          parseInt(e.target.value) || 0
+                          parseFloat(e.target.value) || 0
                         )
                       }
-                      min="0"
-                      max="60"
+                      min={0}
+                      max={60}
+                      placeholder="12"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <FieldTooltip field="laiSuatThaNoi">
-                      <Label htmlFor="laiSuatThaNoi">
-                        Lãi suất thả nổi (%/năm)
-                      </Label>
-                    </FieldTooltip>
+                    <Label htmlFor="phiQuanLy">Phí quản lý (VNĐ/tháng)</Label>
+                    <CurrencyInput
+                      value={watchedValues.phiQuanLy || 0}
+                      onChange={(value) => form.setValue("phiQuanLy", value)}
+                      placeholder="500,000"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="tyLeLapDay">Tỷ lệ lấp đầy (%)</Label>
                     <PercentageInput
-                      value={watchedValues.laiSuatThaNoi || 0}
-                      onChange={(value) =>
-                        form.setValue("laiSuatThaNoi", value)
-                      }
-                      max={25}
+                      value={watchedValues.tyLeLapDay || 95}
+                      onChange={(value) => form.setValue("tyLeLapDay", value)}
+                      max={100}
+                      min={50}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phiBaoTri">Phí bảo trì (%/năm)</Label>
+                    <PercentageInput
+                      value={watchedValues.phiBaoTri || 1}
+                      onChange={(value) => form.setValue("phiBaoTri", value)}
+                      max={5}
                       step={0.1}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="thoiGianVay">Thời gian vay (năm) *</Label>
-                    <Input
-                      type="number"
-                      {...form.register("thoiGianVay", { valueAsNumber: true })}
-                      min="1"
-                      max="30"
+                    <Label htmlFor="thueSuatChoThue">Thuế cho thuê (%)</Label>
+                    <PercentageInput
+                      value={watchedValues.thueSuatChoThue || 10}
+                      onChange={(value) =>
+                        form.setValue("thueSuatChoThue", value)
+                      }
+                      max={50}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="baoHiemTaiSan">
+                      Bảo hiểm tài sản (%/năm)
+                    </Label>
+                    <PercentageInput
+                      value={watchedValues.baoHiemTaiSan || 0.1}
+                      onChange={(value) =>
+                        form.setValue("baoHiemTaiSan", value)
+                      }
+                      max={2}
+                      step={0.01}
                     />
                   </div>
                 </div>
+              </CollapsibleContent>
+            </Collapsible>
 
-                {/* Estimate monthly payment */}
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Ước tính trả ngân hàng hàng tháng
-                  </p>
-                  <p className="text-xl font-semibold text-blue-600">
-                    {formatVND(calculatedValues.monthlyPayment)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <Separator />
 
-          {/* Tab 3: Thông tin cho thuê */}
-          <TabsContent value="rental" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Thu Nhập Cho Thuê</CardTitle>
-                <CardDescription>
-                  Doanh thu và hiệu suất cho thuê
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <FieldTooltip field="tienThueThang">
-                    <Label htmlFor="tienThueThang">Tiền thuê hàng tháng</Label>
-                  </FieldTooltip>
-                  <CurrencyInput
-                    value={watchedValues.tienThueThang || 0}
-                    onChange={(value) => form.setValue("tienThueThang", value)}
-                    placeholder="VD: 15,000,000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <FieldTooltip field="tyLeLapDay">
-                    <Label htmlFor="tyLeLapDay">Tỷ lệ lấp đầy (%)</Label>
-                  </FieldTooltip>
-                  <PercentageInput
-                    value={watchedValues.tyLeLapDay || 0}
-                    onChange={(value) => form.setValue("tyLeLapDay", value)}
-                    min={50}
-                    max={100}
-                  />
-                </div>
-
-                {/* Rental yield calculation */}
-                {watchedValues.giaTriBDS && watchedValues.tienThueThang && (
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Tỷ suất cho thuê
-                    </p>
-                    <p className="text-xl font-semibold text-green-600">
-                      {(
-                        ((watchedValues.tienThueThang *
-                          12 *
-                          (watchedValues.tyLeLapDay / 100)) /
-                          watchedValues.giaTriBDS) *
-                        100
-                      ).toFixed(2)}
-                      % / năm
-                    </p>
+            {/* Personal Finance - COLLAPSIBLE */}
+            <Collapsible open={showPersonal} onOpenChange={setShowPersonal}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 p-0">
+                  <DollarSign className="h-4 w-4" />
+                  Tài chính cá nhân (tùy chọn)
+                  {showPersonal ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="thuNhapKhac">
+                      Thu nhập khác (VNĐ/tháng)
+                    </Label>
+                    <CurrencyInput
+                      value={watchedValues.thuNhapKhac || 0}
+                      onChange={(value) => form.setValue("thuNhapKhac", value)}
+                      placeholder="VD: 30,000,000"
+                    />
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Tab 4: Chi phí vận hành */}
-          <TabsContent value="costs" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Chi Phí Vận Hành</CardTitle>
-                <CardDescription>
-                  Các khoản chi phí định kỳ và dự phòng
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phiQuanLy">Phí quản lý hàng tháng</Label>
-                  <CurrencyInput
-                    value={watchedValues.phiQuanLy || 0}
-                    onChange={(value) => form.setValue("phiQuanLy", value)}
-                    placeholder="VD: 500,000"
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="showAdvanced">
-                    Hiển thị cài đặt nâng cao
-                  </Label>
-                  <Switch
-                    checked={showAdvanced}
-                    onCheckedChange={setShowAdvanced}
-                  />
-                </div>
-
-                {showAdvanced && (
-                  <div className="space-y-4 border-l-2 border-muted pl-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phiBaoTri">
-                        Phí bảo trì (% giá trị BĐS/năm)
-                      </Label>
-                      <PercentageInput
-                        value={watchedValues.phiBaoTri || 0}
-                        onChange={(value) => form.setValue("phiBaoTri", value)}
-                        max={5}
-                        step={0.1}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="duPhongCapEx">
-                        Dự phòng CapEx (% giá trị BĐS/năm)
-                      </Label>
-                      <PercentageInput
-                        value={watchedValues.duPhongCapEx || 0}
-                        onChange={(value) =>
-                          form.setValue("duPhongCapEx", value)
-                        }
-                        max={5}
-                        step={0.1}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="baoHiemTaiSan">
-                        Bảo hiểm tài sản (% giá trị BĐS/năm)
-                      </Label>
-                      <PercentageInput
-                        value={watchedValues.baoHiemTaiSan || 0}
-                        onChange={(value) =>
-                          form.setValue("baoHiemTaiSan", value)
-                        }
-                        max={2}
-                        step={0.01}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="thueSuatChoThue">Thuế cho thuê (%)</Label>
-                      <PercentageInput
-                        value={watchedValues.thueSuatChoThue || 0}
-                        onChange={(value) =>
-                          form.setValue("thueSuatChoThue", value)
-                        }
-                        max={50}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chiPhiSinhHoat">
+                      Chi phí sinh hoạt (VNĐ/tháng)
+                    </Label>
+                    <CurrencyInput
+                      value={watchedValues.chiPhiSinhHoat || 0}
+                      onChange={(value) =>
+                        form.setValue("chiPhiSinhHoat", value)
+                      }
+                      placeholder="VD: 20,000,000"
+                    />
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab 5: Tài chính cá nhân */}
-          <TabsContent value="personal" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tài Chính Cá Nhân</CardTitle>
-                <CardDescription>
-                  Thu nhập và chi phí sinh hoạt của bạn
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="thuNhapKhac">
-                    Thu nhập hàng tháng (sau thuế) *
-                  </Label>
-                  <CurrencyInput
-                    value={watchedValues.thuNhapKhac || 0}
-                    onChange={(value) => form.setValue("thuNhapKhac", value)}
-                    placeholder="VD: 30,000,000"
-                  />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="chiPhiSinhHoat">
-                    Chi phí sinh hoạt hàng tháng *
-                  </Label>
-                  <CurrencyInput
-                    value={watchedValues.chiPhiSinhHoat || 0}
-                    onChange={(value) => form.setValue("chiPhiSinhHoat", value)}
-                    placeholder="VD: 20,000,000"
-                  />
-                </div>
-
-                {/* Financial health indicator */}
-                {watchedValues.thuNhapKhac && watchedValues.chiPhiSinhHoat && (
-                  <div className="p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Thu nhập khả dụng
-                    </p>
-                    <p className="text-xl font-semibold text-yellow-600">
-                      {formatVND(
-                        watchedValues.thuNhapKhac - watchedValues.chiPhiSinhHoat
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {(
-                        ((watchedValues.thuNhapKhac -
-                          watchedValues.chiPhiSinhHoat) /
-                          watchedValues.thuNhapKhac) *
-                        100
-                      ).toFixed(1)}
-                      % thu nhập
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Submit Button */}
-        <Card>
-          <CardContent className="pt-6">
-            <Button
-              type="submit"
-              className="w-full h-12 text-lg"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Đang tính toán...
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
-                  Tính Toán Dòng Tiền
-                </div>
-              )}
-            </Button>
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
-      </div>
-    </form>
+
+        {/* Submit Button - FIXED */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {/* Quick validation feedback */}
+              {!calculatedValues.canCalculate && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <h4 className="font-semibold text-yellow-800">
+                      Cần nhập thêm thông tin:
+                    </h4>
+                  </div>
+                  <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                    {(!watchedValues.giaTriBDS ||
+                      watchedValues.giaTriBDS === 0) && (
+                      <li>• Giá trị bất động sản</li>
+                    )}
+                    {(!watchedValues.tienThueThang ||
+                      watchedValues.tienThueThang === 0) && (
+                      <li>• Tiền thuê hàng tháng</li>
+                    )}
+                    {(!watchedValues.laiSuatUuDai ||
+                      watchedValues.laiSuatUuDai === 0) && (
+                      <li>• Lãi suất ưu đãi</li>
+                    )}
+                    {(!watchedValues.thoiGianVay ||
+                      watchedValues.thoiGianVay === 0) && (
+                      <li>• Thời gian vay</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {/* Validation errors */}
+              {Object.keys(errors).length > 0 && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <h4 className="font-semibold text-red-800 mb-2">
+                    Cần sửa lỗi:
+                  </h4>
+                  <ul className="text-sm text-red-600 space-y-1">
+                    {Object.entries(errors).map(([field, error]) => (
+                      <li key={field}>• {error?.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-lg"
+                disabled={isLoading || !calculatedValues.canCalculate}
+                size="lg"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Đang tính toán...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5" />
+                    Tính Toán Dòng Tiền
+                  </div>
+                )}
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                Nhấn để phân tích chi tiết khả năng sinh lời của bất động sản
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </TooltipProvider>
   );
 }
