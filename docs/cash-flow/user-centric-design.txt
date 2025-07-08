@@ -1,0 +1,79 @@
+Nguyên tắc Thiết kế Business Logic Lấy Người Dùng Làm Trung Tâm
+Mục tiêu của tài liệu này là xác định các nguyên tắc cốt lõi khi thiết kế business logic để đảm bảo ứng dụng không chỉ mạnh mẽ về mặt tính toán mà còn trực quan, dễ sử dụng và đáng tin cậy đối với người dùng cuối, đặc biệt là người mới.
+
+1. Tư Duy Thiết Kế: Từ "Máy Tính" đến "Cố Vấn Ảo"
+Chúng ta cần thay đổi tư duy. Công cụ của bạn không chỉ đơn thuần nhận dữ liệu và xuất kết quả. Nó phải là một người cố vấn ảo, có khả năng:
+
+Dẫn dắt: Hướng dẫn người dùng qua các bước phức tạp.
+
+Bảo vệ: Giúp người dùng tránh những sai lầm logic.
+
+Giải thích: Giúp người dùng hiểu "tại sao" đằng sau những con số.
+
+Gợi mở: Giúp người dùng khám phá các kịch bản mà họ có thể chưa nghĩ tới.
+
+2. Nguyên Tắc 1: Khởi Đầu Đơn Giản, Mở Rộng Khi Cần (Progressive Disclosure)
+Người dùng mới sẽ bị "ngợp" nếu nhìn thấy toàn bộ các loại sự kiện phức tạp ngay từ đầu.
+
+Business Logic Cần Làm:
+
+Phân Cấp Giao Diện: Thiết kế hai chế độ:
+
+Chế độ Cơ bản: Mặc định chỉ hiển thị các sự kiện đơn giản và quan trọng nhất: Thanh Toán Vốn Tự Có, Giải Ngân Khoản Vay, Trả Nợ Trước Hạn, Thay Đổi Lãi Suất.
+
+Chế độ Chuyên gia: Người dùng có thể chủ động bật chế độ này để truy cập các sự kiện nâng cao như Giải Ngân Theo Đợt, Thiết Lập Phí Trả Nợ...
+
+Trình Hướng Dẫn (Wizard): Thay vì đưa ra một form trống, hãy tạo một quy trình hướng dẫn từng bước. Ví dụ:
+
+Bước 1: "Hãy cho tôi biết giá nhà và số tiền bạn định vay."
+
+Bước 2: "Kế hoạch thanh toán vốn tự có của bạn thế nào? (Thêm các đợt thanh toán)"
+
+Bước 3: "Ngân hàng có cho bạn hưởng ưu đãi lãi suất không? Hãy thêm thông tin đó vào đây."
+
+3. Nguyên Tắc 2: Phản Hồi Tức Thì và Trực Quan Hóa
+Người dùng cần thấy được tác động của mỗi hành động ngay lập tức để hiểu được mối quan hệ nhân-quả.
+
+Business Logic Cần Làm:
+
+Tính Toán Lại Tức Thời: Ngay sau khi người dùng thêm một sự kiện (ví dụ: Trả Nợ Trước Hạn 500 triệu vào năm thứ 3), hệ thống phải ngay lập tức tính toán lại và cập nhật các chỉ số quan trọng như:
+
+Tổng lãi dự kiến tiết kiệm được.
+
+Thời gian trả nợ được rút ngắn.
+
+Số tiền trả hàng tháng mới.
+
+Dòng Thời Gian Trực Quan: Biến "Event Timeline" thành một thành phần giao diện thực sự. Người dùng có thể kéo thả, chỉnh sửa sự kiện ngay trên một thanh trượt thời gian.
+
+Biểu Đồ Động: Có một biểu đồ cột thể hiện dòng tiền hàng tháng. Khi người dùng thêm một sự kiện, các cột trên biểu đồ phải thay đổi theo một cách mượt mà để họ thấy được tác động.
+
+4. Nguyên Tắc 3: Dẫn Dắt và Bảo Vệ Người Dùng
+Sự tin tưởng được xây dựng khi người dùng cảm thấy ứng dụng đủ thông minh để ngăn họ mắc lỗi.
+
+Business Logic Cần Làm:
+
+Xác Thực Logic (Logical Validation): Ngăn chặn các hành động phi logic. Ví dụ: không cho phép tạo sự kiện Trả Nợ Trước Hạn vào một ngày trước ngày Giải Ngân Khoản Vay.
+
+Cảnh Báo Thông Minh: Thay vì chỉ hiển thị một con số âm màu đỏ, hệ thống cần đưa ra cảnh báo rõ ràng.
+
+Ví dụ: "Cảnh báo: Với kịch bản này, dòng tiền của bạn sẽ âm 5 triệu/tháng sau khi hết ưu đãi lãi suất. Bạn có chắc chắn về phương án dự phòng cho khoản thâm hụt này không?"
+
+Chú Thích Ngữ Cảnh (Contextual Tooltips): Bên cạnh mỗi trường nhập liệu hoặc kết quả, có một icon (?) để giải thích thuật ngữ một cách đơn giản. Ví dụ, bên cạnh "Ân hạn gốc", giải thích: "Đây là khoảng thời gian bạn chỉ cần trả lãi, chưa cần trả tiền gốc cho ngân hàng."
+
+5. Nguyên Tắc 4: Cho Phép "Mơ Mộng" và So Sánh (Scenario Management)
+Quyết định lớn không bao giờ đến từ một kịch bản duy nhất. Người dùng cần so sánh các "phiên bản tương lai" khác nhau.
+
+Business Logic Cần Làm:
+
+Lưu Kịch Bản: Cho phép người dùng lưu lại toàn bộ một dòng thời gian sự kiện thành một "Kịch Bản" có tên riêng (ví dụ: "Kịch bản 1: Trả đúng hạn", "Kịch bản 2: Trả trước 500tr sau 3 năm").
+
+So Sánh Đối Chiếu: Đây là tính năng "ăn tiền" cuối cùng. Sau khi tạo nhiều kịch bản, người dùng có thể chọn 2-3 kịch bản để đặt cạnh nhau và so sánh các chỉ số quan trọng nhất trên cùng một màn hình:
+
+Tổng tiền lãi phải trả.
+
+Thời gian trả hết nợ.
+
+Dòng tiền trung bình hàng tháng.
+
+Bằng cách áp dụng những nguyên tắc này, bạn sẽ xây dựng được một ứng dụng không chỉ có bộ não của một chuyên gia tài chính mà còn có trái tim của một người cố vấn tận tâm.

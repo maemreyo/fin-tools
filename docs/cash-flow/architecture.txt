@@ -1,0 +1,106 @@
+Kiến Trúc Logic: Mô Hình Quản Lý Dòng Tiền Động Theo Sự Kiện
+Tài liệu này đề xuất một kiến trúc logic mới để giải quyết bài toán quản lý dòng tiền phức tạp, không đều, dựa trên các sự kiện cụ thể trong quá trình mua và sở hữu bất động sản.
+
+1. Khái Niệm Cốt Lõi: Dòng Thời Gian Sự Kiện (Event Timeline)
+Thay vì tính toán một con số duy nhất cho "mỗi tháng", chúng ta sẽ xây dựng một dòng thời gian (ví dụ 240 tháng cho khoản vay 20 năm). Trên dòng thời gian này, người dùng sẽ định nghĩa các "Sự Kiện" (Events) tại những thời điểm cụ thể. Mỗi sự kiện sẽ làm thay đổi trạng thái tài chính (dòng tiền, dư nợ) từ thời điểm đó trở đi.
+
+2. Các Loại Sự Kiện (Event Types) Cần Xây Dựng
+Đây là các khối lego để người dùng tự xây dựng kịch bản tài chính của riêng mình.
+
+Loại Sự Kiện
+
+Các Trường Dữ Liệu Cần Có
+
+Tác Động Lên Dòng Tiền & Logic
+
+Thanh Toán Vốn Tự Có
+
+Ngày, Số tiền (hoặc % giá trị BĐS)
+
+Tại Ngày đã chọn, Dòng tiền ra một khoản bằng Số tiền. Dư nợ chưa bị ảnh hưởng.
+
+Giải Ngân Khoản Vay
+
+Ngày, Số tiền vay
+
+Tại Ngày đã chọn, Dư nợ gốc tăng lên bằng Số tiền vay. Đây là thời điểm khoản vay chính thức bắt đầu.
+
+Bắt Đầu Trả Lãi/Gốc
+
+Ngày bắt đầu
+
+Từ Ngày bắt đầu trở đi, hệ thống mới bắt đầu tính toán khoản trả nợ hàng tháng (lãi hoặc cả gốc lẫn lãi).
+
+Thiết Lập Ân Hạn Gốc
+
+Ngày bắt đầu, Ngày kết thúc
+
+Trong khoảng thời gian này, khoản trả hàng tháng chỉ bao gồm tiền lãi (Dư nợ * Lãi suất tháng). Dư nợ gốc không giảm.
+
+Trả Nợ Trước Hạn
+
+Ngày, Số tiền trả thêm
+
+Tại Ngày đã chọn, Dòng tiền ra một khoản bằng Số tiền trả thêm và Dư nợ gốc giảm tương ứng.
+
+Thay Đổi Lãi Suất
+
+Ngày, Lãi suất mới
+
+Từ Ngày đã chọn trở đi, tất cả các phép tính lãi suất sẽ được thực hiện dựa trên Lãi suất mới.
+
+---
+
+---
+
+---
+
+Giải Ngân Theo Đợt
+
+Ngày, Số tiền giải ngân
+
+(Nâng cao) Dư nợ gốc tăng dần theo từng đợt. Tiền lãi chỉ tính trên tổng số tiền đã giải ngân, không phải trên toàn bộ khoản vay. Rất quan trọng cho nhà dự án.
+
+Cập Nhật Dòng Tiền
+
+Ngày, Loại dòng tiền (Tiền thuê, Thu nhập khác, Chi phí vận hành), Giá trị mới
+
+(Nâng cao) Từ Ngày đã chọn, các dòng tiền không liên quan đến khoản vay sẽ được cập nhật, ảnh hưởng trực tiếp đến Dòng tiền cuối cùng (ví dụ: được tăng lương, tăng giá thuê nhà).
+
+Thiết Lập Phí Trả Nợ
+
+Từ năm thứ, Đến năm thứ, Tỷ lệ phí
+
+(Nâng cao) Xây dựng một biểu phí trả nợ trước hạn. Khi sự kiện "Trả Nợ Trước Hạn" xảy ra, hệ thống sẽ tự động tra cứu bảng phí này để tính toán chi phí phạt một cách chính xác.
+
+3. Cách Bộ Máy Mô Phỏng Hoạt Động
+Bộ máy sẽ chạy một vòng lặp qua từng tháng trên dòng thời gian (từ tháng 1 đến tháng cuối cùng của khoản vay).
+
+Tại mỗi tháng, hệ thống sẽ tự hỏi:
+
+"Trong tháng này có Sự Kiện nào được lên lịch không?"
+
+"Trạng thái hiện tại là gì (Đang trong thời gian ân hạn? Đã qua ưu đãi lãi suất chưa?)?"
+
+Xử lý Logic:
+
+Nếu có sự kiện "Trả Nợ Trước Hạn": Hệ thống sẽ giảm Dư nợ gốc và tính phí phạt dựa trên "Biểu Phí Trả Nợ". Khoản trả nợ hàng tháng cho các kỳ sau sẽ được tính toán lại.
+
+Nếu có sự kiện "Giải Ngân Theo Đợt": Dư nợ gốc sẽ tăng lên, và tiền lãi cho kỳ tiếp theo sẽ được tính trên dư nợ mới này.
+
+Nếu đến tháng "Thay Đổi Lãi Suất" hoặc "Cập Nhật Dòng Tiền": Hệ thống sẽ cập nhật lại các biến số tương ứng.
+
+Nếu đang trong giai đoạn "Ân Hạn Gốc": Khoản phải trả chỉ là tiền lãi.
+
+Nếu không có sự kiện đặc biệt: Hệ thống sẽ áp dụng khoản trả nợ hàng tháng tiêu chuẩn đã được tính toán gần nhất.
+
+4. Kết Luận
+Với việc bổ sung các loại sự kiện nâng cao, mô hình này có thể xử lý được những kịch bản ẩn và phức tạp nhất, ví dụ:
+
+Mua nhà hình thành trong tương lai: Ngân hàng giải ngân làm nhiều đợt theo tiến độ xây dựng của chủ đầu tư.
+
+Cuộc sống thay đổi: Bạn được tăng lương hoặc tăng giá cho thuê nhà sau 2 năm.
+
+Tất toán khoản vay: Bạn có một khoản tiền lớn và muốn trả hết nợ vào năm thứ 4, hệ thống sẽ tự động tính đúng phí phạt cho năm đó.
+
+Đây là một nền tảng cực kỳ vững chắc để xây dựng một công cụ phân tích tài chính bất động sản chuyên sâu và đáng tin cậy.

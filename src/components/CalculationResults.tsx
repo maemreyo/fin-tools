@@ -34,10 +34,17 @@ import {
   Lightbulb,
   Calculator,
   Home,
+  Brain,
+  Target,
+  Shield,
+  Zap,
+  Eye,
+  RefreshCw,
 } from 'lucide-react';
 
 import { CalculationResult } from '@/types/real-estate';
 import { formatVND, formatPercent } from '@/lib/financial-utils';
+import AIAdvisorySystem from './AIAdvisorySystem';
 
 interface CalculationResultsProps {
   result: CalculationResult;
@@ -59,6 +66,27 @@ const PIE_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b
 
 export default function CalculationResults({ result, onExport, onNewCalculation }: CalculationResultsProps) {
   const { inputs, steps, warnings, suggestions } = result;
+  const [activeTab, setActiveTab] = React.useState("overview");
+
+  // Quick summary metrics
+  const summaryMetrics = React.useMemo(() => {
+    const isPositiveCashFlow = steps.dongTienRongBDS > 0;
+    const roiLevel = result.roiHangNam > 15 ? "Xuất sắc" : 
+                   result.roiHangNam > 10 ? "Tốt" :
+                   result.roiHangNam > 5 ? "Trung bình" : "Thấp";
+    const riskLevel = inputs.tyLeVay > 80 ? "Cao" : 
+                     inputs.tyLeVay > 70 ? "Trung bình" : "Thấp";
+    
+    return {
+      isPositiveCashFlow,
+      roiLevel,
+      riskLevel,
+      monthlyImpact: steps.dongTienRongBDS,
+      yearlyReturn: steps.dongTienRongBDS * 12,
+      paybackMonths: steps.tongVonBanDau > 0 && steps.dongTienRongBDS > 0 ? 
+        Math.ceil(steps.tongVonBanDau / steps.dongTienRongBDS) : -1
+    };
+  }, [steps, inputs, result]);
 
   // Tính toán dữ liệu cho charts
   const cashFlowOverTime = React.useMemo(() => {
@@ -66,128 +94,62 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
     const data = [];
     
     for (let month = 1; month <= months; month++) {
-      // Simplified projection - trong thực tế sẽ phức tạp hơn
+      const year = Math.ceil(month / 12);
       const isPreferentialPeriod = month <= inputs.thoiGianUuDai;
-      const currentCashFlow = steps.dongTienRongBDS;
+      
+      // Simplified projection - trong thực tế sẽ phức tạp hơn
+      let currentCashFlow = steps.dongTienRongBDS;
+      
+      // Adjust for interest rate change after preferential period
+      if (!isPreferentialPeriod) {
+        const rateDiff = (inputs.laiSuatThaNoi - inputs.laiSuatUuDai) / 100 / 12;
+        const additionalPayment = (inputs.giaTriBDS * inputs.tyLeVay / 100) * rateDiff;
+        currentCashFlow -= additionalPayment;
+      }
       
       data.push({
         month,
-        year: Math.ceil(month / 12),
+        year,
         cashFlow: currentCashFlow,
         cumulativeCashFlow: currentCashFlow * month - steps.tongVonBanDau,
-        period: isPreferentialPeriod ? 'Ưu đãi' : 'Thả nổi'
+        period: isPreferentialPeriod ? "Ưu đãi" : "Thả nổi",
+        netWorth: (currentCashFlow * month - steps.tongVonBanDau) + inputs.giaTriBDS,
       });
     }
     
     return data;
   }, [inputs, steps]);
 
-  // Breakdown chi phí hàng tháng
-  const monthlyExpenseBreakdown = [
-    { name: 'Trả ngân hàng', value: steps.tienTraNHThang, color: PIE_COLORS[0] },
-    { name: 'Phí quản lý', value: inputs.phiQuanLy, color: PIE_COLORS[1] },
-    { name: 'Bảo trì', value: steps.chiPhiBaoTriThang, color: PIE_COLORS[2] },
-    { name: 'Dự phòng CapEx', value: steps.duPhongCapExThang, color: PIE_COLORS[3] },
-    { name: 'Bảo hiểm', value: steps.baoHiemTaiSanThang, color: PIE_COLORS[4] }
-  ].filter(item => item.value > 0);
-
-  // Initial investment breakdown
-  const initialInvestmentBreakdown = [
-    { name: 'Vốn tự có', value: steps.vonTuCo, color: PIE_COLORS[0] },
-    { name: 'Chi phí trang bị', value: inputs.chiPhiTrangBi, color: PIE_COLORS[1] },
-    { name: 'Chi phí mua', value: inputs.giaTriBDS * (inputs.chiPhiMua / 100), color: PIE_COLORS[2] },
-    { name: 'Bảo hiểm khoản vay', value: steps.soTienVay * (inputs.baoHiemKhoanVay / 100), color: PIE_COLORS[3] }
-  ].filter(item => item.value > 0);
-
-  // Key metrics
-  const keyMetrics = [
-    {
-      label: 'Dòng tiền ròng BĐS',
-      value: steps.dongTienRongBDS,
-      format: 'currency',
-      trend: steps.dongTienRongBDS > 0 ? 'up' : 'down',
-      description: 'Thu nhập - chi phí từ BĐS mỗi tháng'
-    },
-    {
-      label: 'Dòng tiền cá nhân',
-      value: steps.dongTienCuoiCung,
-      format: 'currency',
-      trend: steps.dongTienCuoiCung > 0 ? 'up' : 'down',
-      description: 'Tổng dòng tiền sau khi trừ sinh hoạt'
-    },
-    {
-      label: 'ROI hàng năm',
-      value: result.roiHangNam,
-      format: 'percent',
-      trend: result.roiHangNam > 8 ? 'up' : result.roiHangNam > 5 ? 'neutral' : 'down',
-      description: 'Tỷ suất lợi nhuận trên vốn đầu tư'
-    },
-    {
-      label: 'Thời gian hoàn vốn',
-      value: result.paybackPeriod,
-      format: 'years',
-      trend: result.paybackPeriod < 10 ? 'up' : result.paybackPeriod < 15 ? 'neutral' : 'down',
-      description: 'Số năm để thu hồi vốn đầu tư'
-    }
-  ];
-
-  const MetricCard: React.FC<{ metric: typeof keyMetrics[0] }> = ({ metric }) => {
-    const getTrendIcon = (trend: string) => {
-      switch (trend) {
-        case 'up': return <TrendingUp className="h-4 w-4 text-green-500" />;
-        case 'down': return <TrendingDown className="h-4 w-4 text-red-500" />;
-        default: return <DollarSign className="h-4 w-4 text-yellow-500" />;
-      }
-    };
-
-    const formatValue = (value: number, format: string) => {
-      switch (format) {
-        case 'currency': return formatVND(value);
-        case 'percent': return formatPercent(value);
-        case 'years': return value > 0 ? `${value.toFixed(1)} năm` : 'Không hoàn vốn';
-        default: return value.toString();
-      }
-    };
-
-    const getTrendColor = (trend: string) => {
-      switch (trend) {
-        case 'up': return 'text-green-600 bg-green-50';
-        case 'down': return 'text-red-600 bg-red-50';
-        default: return 'text-yellow-600 bg-yellow-50';
-      }
-    };
-
-    return (
-      <Card className="relative overflow-hidden">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
-              <p className="text-2xl font-bold">{formatValue(metric.value, metric.format)}</p>
-              <p className="text-xs text-muted-foreground">{metric.description}</p>
-            </div>
-            <div className={`p-2 rounded-full ${getTrendColor(metric.trend)}`}>
-              {getTrendIcon(metric.trend)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  // Breakdown chart data
+  const expenseBreakdown = React.useMemo(() => {
+    const tienTraNH = steps.tienTraNHThang || 0;
+    const phiQuanLy = inputs.phiQuanLy || 0;
+    const phiBaoTri = steps.chiPhiBaoTriThang || 0;
+    const baoHiem = steps.baoHiemTaiSanThang || 0;
+    const thue = steps.thueChoThue_Thang || 0;
+    
+    return [
+      { name: 'Trả ngân hàng', value: tienTraNH, color: CHART_COLORS.negative },
+      { name: 'Phí quản lý', value: phiQuanLy, color: CHART_COLORS.warning },
+      { name: 'Bảo trì', value: phiBaoTri, color: CHART_COLORS.secondary },
+      { name: 'Bảo hiểm', value: baoHiem, color: CHART_COLORS.neutral },
+      { name: 'Thuế', value: thue, color: CHART_COLORS.primary },
+    ].filter(item => item.value > 0);
+  }, [inputs, steps]);
 
   return (
     <div className="space-y-6">
-      {/* Header với tổng quan nhanh */}
-      <Card className="border-2 border-primary/20">
+      {/* ENHANCED Header với quick insights */}
+      <Card className="border-2 border-primary/20 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-6 w-6" />
-                Kết Quả Phân Tích Đầu Tư
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Calculator className="h-6 w-6 text-primary" />
+                Kết Quả Phân Tích
               </CardTitle>
-              <CardDescription>
-                Tính toán hoàn tất lúc {result.calculatedAt.toLocaleString('vi-VN')}
+              <CardDescription className="text-base">
+                {result.scenarioName || "Phân tích đầu tư bất động sản"}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -198,7 +160,8 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                 </Button>
               )}
               {onNewCalculation && (
-                <Button onClick={onNewCalculation}>
+                <Button variant="outline" onClick={onNewCalculation}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
                   Tính toán mới
                 </Button>
               )}
@@ -206,447 +169,392 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
           </div>
         </CardHeader>
         <CardContent>
-          {/* Cảnh báo và gợi ý nhanh */}
-          {warnings.length > 0 && (
-            <div className="mb-4 p-4 border border-red-200 bg-red-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                <span className="font-semibold text-red-700">Cảnh báo quan trọng</span>
-              </div>
-              <div className="space-y-1">
-                {warnings.slice(0, 2).map((warning, index) => (
-                  <p key={index} className="text-sm text-red-600">{warning}</p>
-                ))}
-                {warnings.length > 2 && (
-                  <p className="text-xs text-red-500">+{warnings.length - 2} cảnh báo khác...</p>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Quick Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-white border-2">
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground mb-1">Dòng tiền/tháng</div>
+                  <div className={`text-2xl font-bold ${
+                    summaryMetrics.isPositiveCashFlow ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatVND(summaryMetrics.monthlyImpact)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {summaryMetrics.isPositiveCashFlow ? 'Thu thêm' : 'Chi thêm'} hàng tháng
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Status tổng quan */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 rounded-lg bg-blue-50">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Home className="h-5 w-5 text-blue-600" />
-                <span className="font-semibold text-blue-700">Tổng đầu tư</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-600">
-                {formatVND(steps.tongVonBanDau)}
-              </p>
-            </div>
+            <Card className="bg-white border-2">
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground mb-1">ROI năm</div>
+                  <div className={`text-2xl font-bold ${
+                    result.roiHangNam > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {result.roiHangNam.toFixed(1)}%
+                  </div>
+                  <Badge variant={
+                    result.roiHangNam > 10 ? "default" : 
+                    result.roiHangNam > 5 ? "secondary" : "destructive"
+                  } className="text-xs">
+                    {summaryMetrics.roiLevel}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-2">
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground mb-1">Hoàn vốn</div>
+                  <div className="text-xl font-bold text-blue-600">
+                    {summaryMetrics.paybackMonths > 0 ? 
+                      `${Math.floor(summaryMetrics.paybackMonths / 12)}Y ${summaryMetrics.paybackMonths % 12}M` : 
+                      "∞"
+                    }
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {summaryMetrics.paybackMonths > 0 ? 'Thời gian hoàn vốn' : 'Không hoàn vốn'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-2">
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground mb-1">Mức rủi ro</div>
+                  <div className="text-xl font-bold text-orange-600">
+                    {summaryMetrics.riskLevel}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Vay {inputs.tyLeVay.toFixed(0)}% giá trị
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Status Indicators */}
+          <div className="flex flex-wrap gap-2">
+            <Badge 
+              variant={summaryMetrics.isPositiveCashFlow ? "default" : "destructive"}
+              className="flex items-center gap-1"
+            >
+              {summaryMetrics.isPositiveCashFlow ? 
+                <CheckCircle className="h-3 w-3" /> : 
+                <XCircle className="h-3 w-3" />
+              }
+              {summaryMetrics.isPositiveCashFlow ? 'Dòng tiền dương' : 'Dòng tiền âm'}
+            </Badge>
             
-            <div className="text-center p-4 rounded-lg bg-green-50">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <span className="font-semibold text-green-700">Dòng tiền/tháng</span>
-              </div>
-              <p className={`text-2xl font-bold ${steps.dongTienRongBDS >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatVND(steps.dongTienRongBDS)}
-              </p>
-            </div>
+            <Badge variant={result.rentalYield > 5 ? "default" : "secondary"}>
+              Yield: {result.rentalYield?.toFixed(2)}%
+            </Badge>
             
-            <div className="text-center p-4 rounded-lg bg-purple-50">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-                <span className="font-semibold text-purple-700">ROI/năm</span>
-              </div>
-              <p className="text-2xl font-bold text-purple-600">
-                {formatPercent(result.roiHangNam)}
-              </p>
-            </div>
+            <Badge variant={inputs.tyLeVay <= 70 ? "default" : "destructive"}>
+              LTV: {inputs.tyLeVay.toFixed(0)}%
+            </Badge>
+
+            {warnings.length > 0 && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {warnings.length} cảnh báo
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="metrics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="metrics">Chỉ số chính</TabsTrigger>
-          <TabsTrigger value="breakdown">Chi tiết tính toán</TabsTrigger>
-          <TabsTrigger value="charts">Biểu đồ</TabsTrigger>
-          <TabsTrigger value="analysis">Phân tích & Gợi ý</TabsTrigger>
+      {/* ENHANCED Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Tổng quan
+          </TabsTrigger>
+          <TabsTrigger value="ai-analysis" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            AI Phân tích
+          </TabsTrigger>
+          <TabsTrigger value="cashflow" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Dòng tiền
+          </TabsTrigger>
+          <TabsTrigger value="breakdown" className="flex items-center gap-2">
+            <PieChartIcon className="h-4 w-4" />
+            Chi tiết
+          </TabsTrigger>
+          <TabsTrigger value="projections" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Dự báo
+          </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Key Metrics */}
-        <TabsContent value="metrics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {keyMetrics.map((metric, index) => (
-              <MetricCard key={index} metric={metric} />
-            ))}
-          </div>
-
-          {/* Detailed breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Thu Nhập Hàng Tháng</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Tiền thuê danh nghĩa</span>
-                  <span className="font-semibold">{formatVND(inputs.tienThueThang)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>× Tỷ lệ lấp đầy ({inputs.tyLeLapDay}%)</span>
-                  <span>{formatVND(steps.thuNhapThueHieuDung)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>- Thuế cho thuê</span>
-                  <span>-{formatVND(steps.thueChoThue_Thang)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-semibold text-green-600">
-                  <span>Thu nhập ròng</span>
-                  <span>{formatVND(steps.thuNhapThueHieuDung - steps.thueChoThue_Thang)}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Chi Phí Hàng Tháng</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Trả ngân hàng</span>
-                  <span className="font-semibold text-red-600">{formatVND(steps.tienTraNHThang)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Phí quản lý</span>
-                  <span>{formatVND(inputs.phiQuanLy)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Bảo trì + dự phòng</span>
-                  <span>{formatVND(steps.chiPhiBaoTriThang + steps.duPhongCapExThang)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Bảo hiểm</span>
-                  <span>{formatVND(steps.baoHiemTaiSanThang)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-semibold text-red-600">
-                  <span>Tổng chi phí</span>
-                  <span>{formatVND(steps.tongChiPhiVanHanh)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Tab 2: Detailed Breakdown */}
-        <TabsContent value="breakdown" className="space-y-6">
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Bước tính toán */}
+            {/* Investment Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>4 Bước Tính Toán Chính</CardTitle>
-                <CardDescription>Theo công thức trong tài liệu phân tích</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center">1</Badge>
-                    <span className="font-semibold">Vốn đầu tư ban đầu</span>
-                  </div>
-                  <div className="ml-8 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span>Vốn tự có</span>
-                      <span>{formatVND(steps.vonTuCo)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Chi phí trang bị</span>
-                      <span>{formatVND(inputs.chiPhiTrangBi)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Chi phí giao dịch</span>
-                      <span>{formatVND(inputs.giaTriBDS * inputs.chiPhiMua / 100)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Bảo hiểm khoản vay</span>
-                      <span>{formatVND(steps.soTienVay * inputs.baoHiemKhoanVay / 100)}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-semibold">
-                      <span>Tổng vốn ban đầu</span>
-                      <span>{formatVND(steps.tongVonBanDau)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center">2</Badge>
-                    <span className="font-semibold">Chi phí vận hành tháng</span>
-                  </div>
-                  <div className="ml-8 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span>Trả ngân hàng (giai đoạn ưu đãi)</span>
-                      <span>{formatVND(steps.tienTraNHThang)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Các chi phí khác</span>
-                      <span>{formatVND(steps.tongChiPhiVanHanh - steps.tienTraNHThang)}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-semibold">
-                      <span>Tổng chi phí</span>
-                      <span>{formatVND(steps.tongChiPhiVanHanh)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center">3</Badge>
-                    <span className="font-semibold">Dòng tiền ròng BĐS</span>
-                  </div>
-                  <div className="ml-8 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span>Thu nhập hiệu dung</span>
-                      <span>{formatVND(steps.thuNhapThueHieuDung)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>- Tổng chi phí</span>
-                      <span>-{formatVND(steps.tongChiPhiVanHanh)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>- Thuế</span>
-                      <span>-{formatVND(steps.thueChoThue_Thang)}</span>
-                    </div>
-                    <Separator />
-                    <div className={`flex justify-between font-semibold ${steps.dongTienRongBDS >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      <span>Dòng tiền ròng</span>
-                      <span>{formatVND(steps.dongTienRongBDS)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center">4</Badge>
-                    <span className="font-semibold">Dòng tiền cá nhân</span>
-                  </div>
-                  <div className="ml-8 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span>Thu nhập cá nhân</span>
-                      <span>{formatVND(inputs.thuNhapKhac)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>- Chi phí sinh hoạt</span>
-                      <span>-{formatVND(inputs.chiPhiSinhHoat)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>+ Dòng tiền BĐS</span>
-                      <span className={steps.dongTienRongBDS >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {steps.dongTienRongBDS >= 0 ? '+' : ''}{formatVND(steps.dongTienRongBDS)}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className={`flex justify-between font-semibold ${steps.dongTienCuoiCung >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      <span>Dòng tiền cuối cùng</span>
-                      <span>{formatVND(steps.dongTienCuoiCung)}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Thông tin khoản vay */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Chi Tiết Khoản Vay</CardTitle>
+                <CardTitle>Tổng Quan Đầu Tư</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Số tiền vay</p>
-                    <p className="font-semibold text-blue-600">{formatVND(steps.soTienVay)}</p>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Giá trị bất động sản:</span>
+                    <span className="font-semibold">{formatVND(inputs.giaTriBDS)}</span>
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Vốn tự có</p>
-                    <p className="font-semibold text-green-600">{formatVND(steps.vonTuCo)}</p>
+                  <div className="flex justify-between">
+                    <span>Vốn tự có:</span>
+                    <span className="font-semibold text-green-600">{formatVND(steps.vonTuCo || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Số tiền vay:</span>
+                    <span className="font-semibold text-orange-600">{formatVND(steps.soTienVay || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tổng vốn ban đầu:</span>
+                    <span className="font-semibold text-blue-600">{formatVND(steps.tongVonBanDau)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between">
+                    <span>Thu nhập thuê/tháng:</span>
+                    <span className="font-semibold text-green-600">{formatVND(steps.thuNhapThueHieuDung)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Chi phí vận hành/tháng:</span>
+                    <span className="font-semibold text-red-600">{formatVND(steps.tongChiPhiVanHanh)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Dòng tiền ròng/tháng:</span>
+                    <span className={summaryMetrics.isPositiveCashFlow ? 'text-green-600' : 'text-red-600'}>
+                      {formatVND(steps.dongTienRongBDS)}
+                    </span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Performance Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Chỉ Số Hiệu Quả</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm">Giai đoạn ưu đãi</span>
-                      <span className="text-sm font-semibold">{inputs.thoiGianUuDai} tháng</span>
+                      <span>ROI hàng năm:</span>
+                      <span className="font-semibold">{formatPercent(result.roiHangNam)}</span>
                     </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Lãi suất {formatPercent(inputs.laiSuatUuDai)}</span>
-                      <span>Trả {formatVND(steps.tienTraNHThang)}/tháng</span>
+                    <Progress 
+                      value={Math.max(0, Math.min(100, result.roiHangNam * 5))} 
+                      className="h-2" 
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>Rental Yield:</span>
+                      <span className="font-semibold">{formatPercent(result.rentalYield || 0)}</span>
                     </div>
+                    <Progress 
+                      value={Math.max(0, Math.min(100, (result.rentalYield || 0) * 10))} 
+                      className="h-2" 
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>Tỷ lệ vay:</span>
+                      <span className="font-semibold">{formatPercent(inputs.tyLeVay)}</span>
+                    </div>
+                    <Progress 
+                      value={inputs.tyLeVay} 
+                      className="h-2" 
+                    />
                   </div>
 
                   <Separator />
 
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">Giai đoạn thả nổi</span>
-                      <span className="text-sm font-semibold">{(inputs.thoiGianVay * 12) - inputs.thoiGianUuDai} tháng</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Lãi suất {formatPercent(inputs.laiSuatThaNoi)}</span>
-                      <span>Trả ~{formatVND(steps.tienTraNHThang * 1.5)}/tháng</span>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-sm text-blue-600 mb-1">Lợi nhuận dự kiến/năm</div>
+                    <div className="text-2xl font-bold text-blue-800">
+                      {formatVND(summaryMetrics.yearlyReturn)}
                     </div>
                   </div>
-                </div>
-
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <p className="text-sm text-yellow-700">
-                    <strong>Lưu ý:</strong> Khoản thanh toán sẽ tăng đáng kể sau giai đoạn ưu đãi. 
-                    Hãy chuẩn bị tài chính cho giai đoạn này.
-                  </p>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Warnings & Suggestions */}
+          {(warnings.length > 0 || suggestions.length > 0) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {warnings.length > 0 && (
+                <Card className="border-red-200 bg-red-50">
+                  <CardHeader>
+                    <CardTitle className="text-red-800 flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Cảnh Báo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {warnings.slice(0, 3).map((warning, index) => (
+                        <p key={index} className="text-sm text-red-700 flex items-start gap-2">
+                          <span className="text-red-500 mt-0.5">•</span>
+                          {warning}
+                        </p>
+                      ))}
+                      {warnings.length > 3 && (
+                        <p className="text-xs text-red-600">+{warnings.length - 3} cảnh báo khác...</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {suggestions.length > 0 && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-blue-800 flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5" />
+                      Gợi Ý Tối Ưu
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {suggestions.slice(0, 3).map((suggestion, index) => (
+                        <p key={index} className="text-sm text-blue-700 flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5">•</span>
+                          {suggestion}
+                        </p>
+                      ))}
+                      {suggestions.length > 3 && (
+                        <p className="text-xs text-blue-600">+{suggestions.length - 3} gợi ý khác...</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TabsContent>
 
-        {/* Tab 3: Charts */}
-        <TabsContent value="charts" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Dòng tiền theo thời gian */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Dòng Tiền Theo Thời Gian
-                </CardTitle>
-                <CardDescription>Dự báo dòng tiền 5 năm đầu</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={cashFlowOverTime.slice(0, 60)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="year" 
-                        tickFormatter={(value) => `Năm ${value}`}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => formatVND(value).replace('₫', '')}
-                      />
-                      <Tooltip 
-                        formatter={(value, name) => [formatVND(value as number), name]}
-                        labelFormatter={(value) => `Năm ${value}`}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="cashFlow" 
-                        stroke={CHART_COLORS.primary} 
-                        strokeWidth={2}
-                        name="Dòng tiền hàng tháng"
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="cumulativeCashFlow" 
-                        stroke={CHART_COLORS.secondary} 
-                        strokeWidth={2}
-                        name="Dòng tiền tích lũy"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+        {/* AI Analysis Tab - NEW FEATURE */}
+        <TabsContent value="ai-analysis" className="space-y-6">
+          <AIAdvisorySystem 
+            result={result}
+            onScenarioGenerated={(scenarios) => {
+              console.log("Generated scenarios:", scenarios);
+              // Handle scenario generation callback if needed
+            }}
+          />
+        </TabsContent>
 
-            {/* Phân bổ chi phí */}
+        {/* Cash Flow Tab */}
+        <TabsContent value="cashflow" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dòng Tiền Theo Thời Gian</CardTitle>
+              <CardDescription>
+                Dự báo dòng tiền và tích lũy trong 5 năm tới
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={cashFlowOverTime.filter((_, index) => index % 3 === 0)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis tickFormatter={(value) => `${(value/1000000).toFixed(0)}M`} />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        formatVND(Number(value)), 
+                        name === 'cashFlow' ? 'Dòng tiền/tháng' : 'Tích lũy'
+                      ]}
+                      labelFormatter={(year) => `Năm ${year}`}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="cashFlow" 
+                      stroke={CHART_COLORS.primary} 
+                      strokeWidth={2}
+                      name="Dòng tiền"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="cumulativeCashFlow" 
+                      stroke={CHART_COLORS.secondary} 
+                      strokeWidth={2}
+                      name="Tích lũy"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Breakdown Tab */}
+        <TabsContent value="breakdown" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  Phân Bổ Chi Phí Hàng Tháng
-                </CardTitle>
-                <CardDescription>Tỷ lệ các khoản chi phí</CardDescription>
+                <CardTitle>Phân Bổ Chi Phí Hàng Tháng</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={monthlyExpenseBreakdown}
+                        data={expenseBreakdown}
                         cx="50%"
                         cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {monthlyExpenseBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {expenseBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => formatVND(value as number)} />
+                      <Tooltip formatter={(value) => formatVND(Number(value))} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Cơ cấu vốn đầu tư */}
             <Card>
               <CardHeader>
-                <CardTitle>Cơ Cấu Vốn Đầu Tư Ban Đầu</CardTitle>
+                <CardTitle>Chi Tiết Chi Phí</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={initialInvestmentBreakdown} layout="horizontal">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        type="number"
-                        tickFormatter={(value) => formatVND(value).replace('₫', '')}
-                      />
-                      <YAxis type="category" dataKey="name" width={100} />
-                      <Tooltip formatter={(value) => formatVND(value as number)} />
-                      <Bar dataKey="value" fill={CHART_COLORS.primary} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Benchmarking */}
-            <Card>
-              <CardHeader>
-                <CardTitle>So Sánh Với Thị Trường</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Tỷ suất cho thuê của bạn</span>
-                    <span className="font-semibold">{formatPercent((inputs.tienThueThang * 12 * inputs.tyLeLapDay / 100) / inputs.giaTriBDS * 100)}</span>
-                  </div>
-                  <Progress 
-                    value={Math.min(100, (inputs.tienThueThang * 12 * inputs.tyLeLapDay / 100) / inputs.giaTriBDS * 100 * 10)} 
-                    className="h-2"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Thấp (&lt;4%)</span>
-                    <span>Tốt (6-8%)</span>
-                    <span>Cao (&gt;10%)</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>ROI của bạn</span>
-                    <span className="font-semibold">{formatPercent(result.roiHangNam)}</span>
-                  </div>
-                  <Progress 
-                    value={Math.min(100, Math.max(0, result.roiHangNam * 5))} 
-                    className="h-2"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Thấp (&lt;5%)</span>
-                    <span>Khá (8-12%)</span>
-                    <span>Tốt (&gt;15%)</span>
+                <div className="space-y-3">
+                  {expenseBreakdown.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                        />
+                        <span>{item.name}</span>
+                      </div>
+                      <span className="font-semibold">{formatVND(item.value)}</span>
+                    </div>
+                  ))}
+                  <Separator />
+                  <div className="flex justify-between items-center font-bold">
+                    <span>Tổng chi phí:</span>
+                    <span className="text-red-600">{formatVND(steps.tongChiPhiVanHanh)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -654,126 +562,41 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
           </div>
         </TabsContent>
 
-        {/* Tab 4: Analysis & Suggestions */}
-        <TabsContent value="analysis" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Cảnh báo */}
-            {warnings.length > 0 && (
-              <Card className="border-red-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-700">
-                    <AlertTriangle className="h-5 w-5" />
-                    Các Cảnh Báo Quan Trọng
-                  </CardTitle>
-                  <CardDescription>
-                    Những vấn đề cần lưu ý trong kịch bản đầu tư này
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {warnings.map((warning, index) => (
-                    <div key={index} className="flex items-start gap-2 p-3 bg-red-50 rounded-lg">
-                      <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-red-700">{warning}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Gợi ý */}
-            {suggestions.length > 0 && (
-              <Card className="border-blue-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-700">
-                    <Lightbulb className="h-5 w-5" />
-                    Gợi Ý Cải Thiện
-                  </CardTitle>
-                  <CardDescription>
-                    Những điều chỉnh có thể làm cho đầu tư hiệu quả hơn
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {suggestions.map((suggestion, index) => (
-                    <div key={index} className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                      <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-blue-700">{suggestion}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Kết luận tổng thể */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Đánh Giá Tổng Thể</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {steps.dongTienRongBDS > 0 ? (
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <span className="font-semibold text-green-800">Kịch bản khả quan</span>
-                      </div>
-                      <p className="text-sm text-green-700">
-                        Bất động sản này tạo ra dòng tiền dương {formatVND(steps.dongTienRongBDS)}/tháng, 
-                        với ROI {formatPercent(result.roiHangNam)} và thời gian hoàn vốn khoảng {result.paybackPeriod.toFixed(1)} năm.
-                        Đây là một khoản đầu tư có tiềm năng tốt.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <span className="font-semibold text-red-800">Kịch bản có rủi ro</span>
-                      </div>
-                      <p className="text-sm text-red-700">
-                        Bất động sản này tạo ra dòng tiền âm {formatVND(Math.abs(steps.dongTienRongBDS))}/tháng. 
-                        Bạn cần hỗ trợ thêm tiền hàng tháng để duy trì khoản đầu tư này. 
-                        Cân nhắc kỹ các gợi ý cải thiện trước khi quyết định.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="text-center p-3 border rounded-lg">
-                      <p className="text-sm text-muted-foreground">Mức độ rủi ro</p>
-                      <p className={`font-semibold ${
-                        inputs.tyLeVay < 70 && steps.dongTienCuoiCung > 0 ? 'text-green-600' : 
-                        inputs.tyLeVay < 80 && steps.dongTienCuoiCung >= 0 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {inputs.tyLeVay < 70 && steps.dongTienCuoiCung > 0 ? 'Thấp' : 
-                         inputs.tyLeVay < 80 && steps.dongTienCuoiCung >= 0 ? 'Trung bình' : 'Cao'}
-                      </p>
-                    </div>
-                    
-                    <div className="text-center p-3 border rounded-lg">
-                      <p className="text-sm text-muted-foreground">Khuyến nghị</p>
-                      <p className={`font-semibold ${
-                        result.roiHangNam > 10 ? 'text-green-600' : 
-                        result.roiHangNam > 5 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {result.roiHangNam > 10 ? 'Nên đầu tư' : 
-                         result.roiHangNam > 5 ? 'Cân nhắc' : 'Không nên'}
-                      </p>
-                    </div>
-                    
-                    <div className="text-center p-3 border rounded-lg">
-                      <p className="text-sm text-muted-foreground">Mức ưu tiên</p>
-                      <p className={`font-semibold ${
-                        steps.dongTienRongBDS > 2000000 ? 'text-green-600' : 
-                        steps.dongTienRongBDS > 0 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {steps.dongTienRongBDS > 2000000 ? 'Cao' : 
-                         steps.dongTienRongBDS > 0 ? 'Trung bình' : 'Thấp'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Projections Tab */}
+        <TabsContent value="projections" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dự Báo Tài Sản Ròng</CardTitle>
+              <CardDescription>
+                Giá trị tài sản ròng theo thời gian (bao gồm tăng giá BĐS)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={cashFlowOverTime.filter((_, index) => index % 6 === 0)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis tickFormatter={(value) => `${(value/1000000000).toFixed(1)}B`} />
+                    <Tooltip 
+                      formatter={(value) => [formatVND(Number(value)), 'Tài sản ròng']}
+                      labelFormatter={(year) => `Năm ${year}`}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="netWorth" 
+                      stroke={CHART_COLORS.positive} 
+                      strokeWidth={3}
+                      name="Tài sản ròng"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 text-sm text-muted-foreground">
+                * Dự báo giả định giá BĐS không đổi. Trong thực tế có thể tăng/giảm theo thị trường.
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
