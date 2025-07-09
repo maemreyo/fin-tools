@@ -82,6 +82,7 @@ export default function CalculationResults({
   onExport,
   onNewCalculation,
 }: CalculationResultsProps) {
+  console.log("🚀 ~ file: CalculationResults.tsx:28 ~ CalculationResults ~ result:", result);
   const { inputs, steps, warnings, suggestions } = result;
   const [activeTab, setActiveTab] = React.useState("overview");
 

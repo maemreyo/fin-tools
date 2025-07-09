@@ -53,7 +53,8 @@ import {
 } from "lucide-react";
 
 import PropertyInputForm from "@/components/PropertyInputForm";
-import CalculationResults from "@/components/CalculationResults";
+// ✅ UPDATED: Use modal instead of inline results
+import CalculationResultsModal from "@/components/CalculationResultsModal";
 import ScenarioComparison from "@/components/ScenarioComparison";
 import { AIAdvisorySystem } from "@/components/AIAdvisorySystem";
 import {
@@ -62,10 +63,10 @@ import {
   PresetScenario,
 } from "@/types/real-estate";
 import { TimelineScenario } from "@/types/timeline";
+// ✅ UPDATED: Use fixed calculator
 import { calculateRealEstateInvestment } from "@/lib/real-estate-calculator";
 
 // ===== LAZY LOAD TIMELINE COMPONENTS =====
-// Optimize bundle size by loading Timeline components only when needed
 const TimelineDashboard = dynamic(
   () =>
     import("@/components/timeline/TimelineDashboard").then((mod) => ({
@@ -86,25 +87,24 @@ const TimelineDashboard = dynamic(
   }
 );
 
-// ===== PRESET SCENARIOS (Enhanced for Timeline) =====
+// ===== ENHANCED PRESET SCENARIOS =====
 const PRESET_SCENARIOS: PresetScenario[] = [
   {
     id: "studio-gialam-cautious",
     name: "Studio Gia Lâm (Kịch bản Thận trọng)",
     description:
-      "Kịch bản thận trọng cho căn Studio tại Masterise Lakeside, dựa trên các giả định lãi suất cao và tiền thuê thấp mà chúng ta đã thảo luận.",
+      "Kịch bản thận trọng cho căn Studio tại Masterise Lakeside, dựa trên các giả định lãi suất cao và tiền thuê thấp.",
     category: "chung-cu",
     location: "hanoi",
     inputs: {
       giaTriBDS: 2397000000,
+      vonTuCo: 719100000,
       chiPhiTrangBi: 100000000,
-      vonTuCo: 750000000,
-      tyLeVay: 70,
-      thoiGianVay: 35,
-      laiSuatUuDai: 8.0,
-      thoiGianUuDai: 12,
-      laiSuatThaNoi: 10.0,
       tienThueThang: 6000000,
+      laiSuatUuDai: 8,
+      thoiGianUuDai: 12,
+      laiSuatThaNoi: 10,
+      thoiGianVay: 35,
       phiQuanLy: 480000,
       tyLeLapDay: 95,
       thueSuatChoThue: 10,
@@ -113,107 +113,33 @@ const PRESET_SCENARIOS: PresetScenario[] = [
     },
   },
   {
-    id: "1br-gialam-official",
-    name: "1PN Gia Lâm (Theo CĐT)",
-    description:
-      "Phân tích dựa trên phiếu tính giá chính thức từ Chủ đầu tư cho căn 1PN diện tích 44.8m2.",
+    id: "chung-cu-hcm-optimistic",
+    name: "Chung Cư HCM (Kịch bản Lạc quan)",
+    description: "Đầu tư chung cư tại TP.HCM với kỳ vọng tăng trưởng tốt",
     category: "chung-cu",
-    location: "hanoi",
+    location: "hcm",
     inputs: {
-      giaTriBDS: 3512264492,
+      giaTriBDS: 3500000000,
+      vonTuCo: 1050000000,
       chiPhiTrangBi: 150000000,
-      vonTuCo: 750000000,
-      tyLeVay: 70,
-      thoiGianVay: 35,
-      laiSuatUuDai: 8.0,
-      thoiGianUuDai: 24, // Dựa trên chính sách ân hạn thực tế
-      laiSuatThaNoi: 10.0,
-      tienThueThang: 14000000,
-      phiQuanLy: 716800,
-      tyLeLapDay: 95,
-      thueSuatChoThue: 10,
-      thuNhapKhac: 50000000,
-      chiPhiSinhHoat: 15000000,
-    },
-  },
-  {
-    id: "2br-namtuliem-standard",
-    name: "2PN Nam Từ Liêm (Kịch bản Tiêu chuẩn)",
-    description:
-      "Một phương án tham khảo cho căn hộ 2PN điển hình tại khu vực Mỹ Đình, Nam Từ Liêm, phù hợp cho gia đình ở hoặc đầu tư cho thuê.",
-    category: "chung-cu",
-    location: "hanoi",
-    inputs: {
-      giaTriBDS: 4000000000,
-      chiPhiTrangBi: 200000000,
-      vonTuCo: 750000000,
-      tyLeVay: 60,
-      thoiGianVay: 25,
-      laiSuatUuDai: 7.8,
-      thoiGianUuDai: 18,
-      laiSuatThaNoi: 9.8,
-      tienThueThang: 16000000,
-      phiQuanLy: 1200000,
-      tyLeLapDay: 95,
-      thueSuatChoThue: 10,
-      thuNhapKhac: 50000000,
-      chiPhiSinhHoat: 15000000,
-    },
-  },
-  {
-    id: "starter-apartment",
-    name: "🏠 Chung cư starter - Người mới",
-    description: "Căn hộ 2PN phù hợp đầu tư lần đầu, vốn ít, dòng tiền ổn định",
-    category: "chung-cu",
-    location: "hcm",
-    inputs: {
-      giaTriBDS: 2800000000, // 2.8 tỷ
-      vonTuCo: 1000000000, // 1 tỷ (user có)
-      chiPhiTrangBi: 40000000, // 40 triệu
-      tienThueThang: 18000000, // 18 triệu
+      tienThueThang: 12000000,
       laiSuatUuDai: 7.5,
-      thoiGianUuDai: 12,
+      thoiGianUuDai: 24,
       laiSuatThaNoi: 9.5,
-      thoiGianVay: 25,
-      phiQuanLy: 400000,
-      tyLeLapDay: 95,
-      phiBaoTri: 1,
-      thueSuatChoThue: 10,
-      thuNhapKhac: 50000000,
-      chiPhiSinhHoat: 15000000,
-    },
-  },
-  {
-    id: "premium-investment",
-    name: "💎 Căn hộ cao cấp - Nhà đầu tư",
-    description:
-      "Căn hộ 3PN cao cấp, ROI cao, thích hợp investor có kinh nghiệm",
-    category: "chung-cu",
-    location: "hcm",
-    inputs: {
-      giaTriBDS: 5200000000,
-      vonTuCo: 1800000000,
-      chiPhiTrangBi: 80000000,
-      tienThueThang: 35000000,
-      laiSuatUuDai: 6.8,
-      thoiGianUuDai: 18,
-      laiSuatThaNoi: 8.8,
-      thoiGianVay: 20,
-      phiQuanLy: 800000,
+      thoiGianVay: 30,
+      phiQuanLy: 600000,
       tyLeLapDay: 98,
-      phiBaoTri: 0.8,
       thueSuatChoThue: 10,
-      thuNhapKhac: 50000000,
-      chiPhiSinhHoat: 15000000,
+      thuNhapKhac: 80000000,
+      chiPhiSinhHoat: 25000000,
     },
   },
   {
-    id: "townhouse-family",
-    name: "🏘️ Nhà phố - Gia đình trẻ",
-    description:
-      "Nhà phố 4x15m, vừa ở vừa cho thuê, phù hợp gia đình có con nhỏ",
+    id: "nha-pho-danang",
+    name: "Nhà Phố Đà Nẵng",
+    description: "Đầu tư nhà phố tại Đà Nẵng, phù hợp gia đình có con nhỏ",
     category: "nha-pho",
-    location: "hcm",
+    location: "danang",
     inputs: {
       giaTriBDS: 7800000000,
       vonTuCo: 2500000000,
@@ -247,6 +173,8 @@ interface AppState {
   timelineScenarios: TimelineScenario[];
   isCalculating: boolean;
   hasTimelineAccess: boolean;
+  // ✅ NEW: Modal state
+  showResultsModal: boolean;
 }
 
 // ===== MAIN COMPONENT =====
@@ -261,7 +189,8 @@ export default function EnhancedRealEstateCalculatorPage() {
     calculationHistory: [],
     timelineScenarios: [],
     isCalculating: false,
-    hasTimelineAccess: true, // Enable Timeline by default
+    hasTimelineAccess: true,
+    showResultsModal: false, // ✅ NEW
   });
 
   // UI State
@@ -301,11 +230,13 @@ export default function EnhancedRealEstateCalculatorPage() {
     setShowCalculationConfirm(true);
   }, []);
 
+  // ✅ UPDATED: Enhanced calculation handler with modal
   const handleCalculate = useCallback(
     async (inputs: RealEstateInputs) => {
       setAppState((prev) => ({ ...prev, isCalculating: true }));
 
       try {
+        // ✅ Use fixed calculator that eliminates null/NaN
         const result = calculateRealEstateInvestment(inputs);
 
         // Enhanced result with metadata
@@ -322,10 +253,11 @@ export default function EnhancedRealEstateCalculatorPage() {
           currentResult: enhancedResult,
           viewState: "RESULTS",
           isCalculating: false,
+          showResultsModal: true, // ✅ NEW: Show modal instead of inline
           calculationHistory: [
             enhancedResult,
             ...prev.calculationHistory.slice(0, 9),
-          ], // Keep last 10
+          ],
         }));
 
         // Save to localStorage
@@ -335,322 +267,137 @@ export default function EnhancedRealEstateCalculatorPage() {
         ];
         localStorage.setItem("calculation-history", JSON.stringify(newHistory));
 
-        toast.success("Tính toán thành công!", {
-          description: `ROI: ${(result.roiHangNam || 0).toFixed(
-            1
-          )}% - Dòng tiền: ${(
-            (result.steps.dongTienRongBDS || 0) / 1000000
-          ).toFixed(1)}M ₫`,
+        toast.success("Tính toán thành công! 🎉", {
+          description: "Kết quả đã sẵn sàng để xem.",
         });
       } catch (error) {
         console.error("Calculation error:", error);
         setAppState((prev) => ({ ...prev, isCalculating: false }));
 
+        // ✅ IMPROVED: Better error handling
         toast.error("Lỗi tính toán", {
-          description: "Vui lòng kiểm tra lại thông tin đầu vào",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Vui lòng kiểm tra lại dữ liệu đầu vào.",
         });
       }
     },
     [appState.calculationHistory]
   );
 
-  // ===== MODE SWITCHING HANDLERS =====
-  const handleModeSwitch = useCallback(
-    (newMode: CalculatorMode) => {
-      if (newMode === "TIMELINE" && !appState.hasTimelineAccess) {
-        toast.error("Timeline Mode chưa khả dụng", {
-          description: "Vui lòng nâng cấp tài khoản để sử dụng Timeline Mode",
-        });
-        return;
-      }
+  // ✅ NEW: Modal handlers
+  const handleCloseResultsModal = useCallback(() => {
+    setAppState((prev) => ({ ...prev, showResultsModal: false }));
+  }, []);
 
-      if (newMode === "TIMELINE" && appState.currentInputs) {
-        setAppState((prev) => ({
-          ...prev,
-          mode: newMode,
-          viewState: "TIMELINE",
-        }));
-      } else {
-        setAppState((prev) => ({
-          ...prev,
-          mode: newMode,
-          viewState: newMode === "TIMELINE" ? "TIMELINE" : "INPUT",
-        }));
-      }
+  const handleNewCalculation = useCallback(() => {
+    setAppState((prev) => ({
+      ...prev,
+      showResultsModal: false,
+      viewState: "INPUT",
+      currentResult: null,
+    }));
+  }, []);
 
-      toast.success(
-        `Đã chuyển sang ${newMode === "CLASSIC" ? "Classic" : "Timeline"} Mode`
-      );
-    },
-    [appState.hasTimelineAccess, appState.currentInputs]
-  );
-
-  // ===== TIMELINE HANDLERS =====
-  const handleTimelineScenarioSave = useCallback(
-    (scenario: TimelineScenario) => {
-      const newScenarios = [...appState.timelineScenarios, scenario];
-      setAppState((prev) => ({ ...prev, timelineScenarios: newScenarios }));
-      localStorage.setItem("timeline-scenarios", JSON.stringify(newScenarios));
-
-      toast.success("Đã lưu timeline scenario", {
-        description: scenario.scenarioName,
-      });
-    },
-    [appState.timelineScenarios]
-  );
-
-  const handleTimelineScenarioLoad = useCallback(
-    (scenarioId: string) => {
-      const scenario = appState.timelineScenarios.find(
-        (s) => s.id === scenarioId
-      );
-      if (scenario) {
-        toast.success("Đã tải timeline scenario", {
-          description: scenario.scenarioName,
-        });
-      }
-    },
-    [appState.timelineScenarios]
-  );
-
-  // ===== PRESET HANDLERS =====
-  const handlePresetSelect = useCallback(
-    (preset: PresetScenario) => {
+  const handleUpgradeToTimeline = useCallback(() => {
+    if (appState.currentResult) {
       setAppState((prev) => ({
         ...prev,
-        selectedPreset: preset,
-        viewState: "INPUT", // Ensure we're in input view
+        mode: "TIMELINE",
+        viewState: "TIMELINE",
+        showResultsModal: false,
       }));
-      setShowPresets(false);
+      toast.success("Chuyển sang Timeline Mode! 🚀");
+    }
+  }, [appState.currentResult]);
 
-      // Enhanced toast with action buttons
-      toast.success("✅ Đã tải template thành công!", {
-        description: `${preset.name} - Dữ liệu đã được điền vào form`,
-        action: {
-          label: "Tính toán ngay",
-          onClick: () => {
-            // Auto-calculate if user wants
-            if (preset.inputs) {
-              handleCalculate(preset.inputs as RealEstateInputs);
-            }
-          },
-        },
-        duration: 5000,
-      });
+  // Timeline mode handlers
+  const handleSwitchToTimeline = useCallback(() => {
+    setAppState((prev) => ({
+      ...prev,
+      mode: "TIMELINE",
+      viewState: "TIMELINE",
+    }));
+  }, []);
 
-      // Smooth scroll to form
-      setTimeout(() => {
-        const formElement = document.querySelector(
-          '[data-form="property-input"]'
-        );
-        if (formElement) {
-          formElement.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-            inline: "nearest",
-          });
-        }
-      }, 100);
-    },
-    [handleCalculate]
-  );
+  const handleSwitchToClassic = useCallback(() => {
+    setAppState((prev) => ({ ...prev, mode: "CLASSIC", viewState: "INPUT" }));
+  }, []);
 
-  // ===== UPGRADE TO TIMELINE =====
-  const renderTimelineUpgradeCard = useMemo(() => {
-    if (appState.mode === "TIMELINE" || !appState.currentResult) return null;
+  // Preset handlers
+  const handlePresetSelect = useCallback((preset: PresetScenario) => {
+    setAppState((prev) => ({ ...prev, selectedPreset: preset }));
+    toast.success(`Đã tải template "${preset.name}"`);
+  }, []);
 
-    return (
-      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Rocket className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <CardTitle className="text-blue-900">
-                  🚀 Nâng cấp Timeline Mode
-                </CardTitle>
-                <CardDescription className="text-blue-700">
-                  Mô phỏng 240 tháng chi tiết với events và tối ưu hóa
-                </CardDescription>
-              </div>
-            </div>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-              Mới
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Target className="h-4 w-4 text-green-600" />
-                Tính năng Timeline
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>✅ Mô phỏng 240 tháng chi tiết</li>
-                <li>✅ Quản lý events quan trọng</li>
-                <li>✅ So sánh kịch bản đầu tư</li>
-                <li>✅ Tối ưu hóa tự động</li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-                Lợi ích chính
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>🎯 Dự báo chính xác hơn</li>
-                <li>📊 Phân tích sâu hơn</li>
-                <li>⚡ Tối ưu lợi nhuận</li>
-                <li>🛡️ Quản lý rủi ro</li>
-              </ul>
-            </div>
-          </div>
+  // Confirm calculation handler
+  const handleConfirmCalculation = useCallback(() => {
+    if (pendingCalculation) {
+      handleCalculate(pendingCalculation);
+      setPendingCalculation(null);
+      setShowCalculationConfirm(false);
+    }
+  }, [pendingCalculation, handleCalculate]);
 
-          <Separator />
+  // ===== COMPUTED VALUES =====
+  const hasCalculationHistory = appState.calculationHistory.length > 0;
+  const currentCalculation = appState.currentResult;
 
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Dựa trên kết quả tính toán hiện tại
-            </div>
-            <Button
-              onClick={() => handleModeSwitch("TIMELINE")}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Khám phá Timeline Mode
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }, [appState.mode, appState.currentResult, handleModeSwitch]);
-
-  // ===== RENDER MAIN PAGE =====
+  // ===== RENDER =====
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      <div className="container mx-auto py-8 space-y-8">
-        {/* ===== ENHANCED PAGE HEADER ===== */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardHeader className="text-center pb-4">
-            {/* ENHANCED Header với value proposition */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-lg mb-6 border border-primary/20">
-                <div className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-primary">
-                    Smart Calculator
-                  </span>
-                </div>
-                <div className="h-4 w-px bg-primary/20" />
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  <span className="text-sm font-medium text-gray-600">
-                    AI-Powered
-                  </span>
-                </div>
-              </div>
-              <h1 className="text-5xl font-bold text-gray-900 mb-4">
-                Tính Toán Đầu Tư Bất Động Sản
-              </h1>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
-                <span className="font-semibold text-blue-600">
-                  Hiểu bạn như chính bạn.
-                </span>{" "}
-                Chỉ cần giá nhà và số tiền bạn có - chúng tôi sẽ tính toán tất
-                cả còn lại.
-              </p>
-              <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Tính toán real-time</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Phân tích rủi ro thông minh</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Gợi ý tối ưu hóa</span>
-                </div>
-              </div>
-
-              {/* Enhanced Stats Section */}
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calculator className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-blue-900">
-                      Tính toán
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {appState.calculationHistory.length}
-                  </p>
-                  <p className="text-sm text-blue-700">
-                    Phân tích đã thực hiện
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold text-green-900">
-                      Timeline
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-600">
-                    {appState.timelineScenarios.length}
-                  </p>
-                  <p className="text-sm text-green-700">Kịch bản đã lưu</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
-                    <span className="font-semibold text-purple-900">
-                      AI Insights
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {appState.currentResult ? "Sẵn sàng" : "Chờ dữ liệu"}
-                  </p>
-                  <p className="text-sm text-purple-700">
-                    Trạng thái phân tích
-                  </p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="container mx-auto py-8 space-y-8 max-w-7xl">
+        {/* ===== HEADER SECTION ===== */}
+        <Card className="bg-gradient-to-r from-blue-600 to-green-600 text-white border-0">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Home className="h-8 w-8" />
+              <CardTitle className="text-3xl font-bold">
+                Real Estate Calculator Pro
+              </CardTitle>
             </div>
+            <CardDescription className="text-blue-100 text-lg">
+              Phân tích đầu tư bất động sản chuyên nghiệp với AI hỗ trợ
+            </CardDescription>
 
-            {/* ===== MODE SELECTOR ===== */}
-            <div className="flex justify-center">
-              <Tabs
-                value={appState.mode}
-                onValueChange={(mode: any) => handleModeSwitch(mode)}
-              >
-                <TabsList className="grid w-full grid-cols-2 max-w-md h-12">
-                  <TabsTrigger
-                    value="CLASSIC"
-                    className="flex items-center gap-2 px-6"
+            {/* Mode Selector */}
+            <div className="flex justify-center mt-6">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1">
+                <div className="flex gap-1">
+                  <Button
+                    variant={
+                      appState.mode === "CLASSIC" ? "secondary" : "ghost"
+                    }
+                    onClick={handleSwitchToClassic}
+                    className={`${
+                      appState.mode === "CLASSIC"
+                        ? "bg-white text-blue-600"
+                        : "text-white hover:bg-white/20"
+                    }`}
                   >
-                    <Calculator className="h-4 w-4" />
+                    <Calculator className="h-4 w-4 mr-2" />
                     Classic Mode
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="TIMELINE"
-                    className="flex items-center gap-2 px-6"
+                  </Button>
+                  <Button
+                    variant={
+                      appState.mode === "TIMELINE" ? "secondary" : "ghost"
+                    }
+                    onClick={handleSwitchToTimeline}
+                    className={`${
+                      appState.mode === "TIMELINE"
+                        ? "bg-white text-green-600"
+                        : "text-white hover:bg-white/20"
+                    } relative`}
                   >
-                    <Calendar className="h-4 w-4" />
+                    <Calendar className="h-4 w-4 mr-2" />
                     Timeline Mode
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge className="ml-2 bg-yellow-400 text-yellow-900 text-xs">
                       Pro
                     </Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -658,16 +405,19 @@ export default function EnhancedRealEstateCalculatorPage() {
         {/* ===== CLASSIC MODE ===== */}
         {appState.mode === "CLASSIC" && (
           <div className="space-y-8">
-            {/* Preset Scenarios */}
+            {/* ===== PRESET SCENARIOS SECTION ===== */}
             {showPresets && (
-              <Card className="border-amber-200 bg-amber-50">
+              <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-amber-600" />
-                      <CardTitle className="text-amber-900">
-                        Mẫu Có Sẵn
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5" />
+                        Templates Sẵn Có
                       </CardTitle>
+                      <CardDescription>
+                        Chọn template phù hợp để bắt đầu nhanh
+                      </CardDescription>
                     </div>
                     <Button
                       variant="ghost"
@@ -677,87 +427,57 @@ export default function EnhancedRealEstateCalculatorPage() {
                       Ẩn
                     </Button>
                   </div>
-                  <CardDescription className="text-amber-700">
-                    Chọn mẫu để bắt đầu nhanh với thông số thực tế
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {PRESET_SCENARIOS.map((preset) => (
                       <Card
                         key={preset.id}
-                        className={`cursor-pointer hover:shadow-lg transition-all duration-200 bg-white group ${
+                        className={`cursor-pointer transition-all hover:shadow-md ${
                           appState.selectedPreset?.id === preset.id
-                            ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
-                            : "border-amber-200 hover:border-amber-400"
+                            ? "border-blue-500 bg-blue-50"
+                            : ""
                         }`}
                         onClick={() => handlePresetSelect(preset)}
                       >
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <div className="space-y-3">
-                            {/* Header */}
                             <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-sm mb-1 group-hover:text-blue-600 transition-colors">
-                                  {preset.name}
-                                </h3>
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {preset.description}
-                                </p>
-                              </div>
-                              {appState.selectedPreset?.id === preset.id && (
-                                <CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0 ml-2" />
-                              )}
-                            </div>
-
-                            {/* Key Metrics Preview */}
-                            <div className="space-y-2 text-xs">
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">
-                                  Giá BDS:
-                                </span>
-                                <span className="font-medium">
-                                  {(
-                                    preset.inputs.giaTriBDS / 1000000000
-                                  ).toFixed(1)}
-                                  B ₫
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">
-                                  Tiền thuê:
-                                </span>
-                                <span className="font-medium text-green-600">
-                                  {(
-                                    preset.inputs.tienThueThang / 1000000
-                                  ).toFixed(0)}
-                                  M ₫/tháng
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">
-                                  Vay:
-                                </span>
-                                <span className="font-medium">
-                                  {preset.inputs.tyLeVay}% -{" "}
-                                  {preset.inputs.thoiGianVay} năm
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                              <div className="flex items-center gap-2">
+                              <h4 className="font-semibold text-sm">
+                                {preset.name}
+                              </h4>
+                              <div className="flex gap-1">
                                 <Badge variant="outline" className="text-xs">
                                   {preset.category}
                                 </Badge>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-xs">
                                   {preset.location}
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-blue-600 group-hover:text-blue-700">
-                                <span>Chọn</span>
-                                <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {preset.description}
+                            </p>
+                            <div className="text-xs space-y-1">
+                              <div className="flex justify-between">
+                                <span>Giá trị:</span>
+                                <span className="font-medium">
+                                  {preset.inputs.giaTriBDS
+                                    ? `${(
+                                        preset.inputs.giaTriBDS / 1000000000
+                                      ).toFixed(1)}B`
+                                    : "N/A"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Thuê/tháng:</span>
+                                <span className="font-medium">
+                                  {preset.inputs.tienThueThang
+                                    ? `${(
+                                        preset.inputs.tienThueThang / 1000000
+                                      ).toFixed(0)}M`
+                                    : "N/A"}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -769,288 +489,216 @@ export default function EnhancedRealEstateCalculatorPage() {
               </Card>
             )}
 
-            {/* Calculation History */}
-            {appState.calculationHistory.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <History className="h-5 w-5" />
-                      <CardTitle>Lịch Sử Tính Toán</CardTitle>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowComparison(!showComparison)}
-                    >
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      So sánh
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {appState.calculationHistory
-                      .slice(0, 6)
-                      .map((result, index) => (
-                        <Card
-                          key={result.calculationId || index}
-                          className="cursor-pointer hover:shadow-sm transition-all border-gray-200"
-                          onClick={() =>
-                            setAppState((prev) => ({
-                              ...prev,
-                              currentResult: result,
-                              viewState: "RESULTS",
-                            }))
-                          }
-                        >
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="text-sm font-medium">
-                                Tính toán #{index + 1}
-                              </div>
-                              <Badge
-                                variant={
-                                  (result.steps.dongTienRongBDS || 0) > 0
-                                    ? "default"
-                                    : "destructive"
-                                }
-                                className="text-xs shrink-0"
-                              >
-                                {(result.steps.dongTienRongBDS || 0) > 0
-                                  ? "Lời"
-                                  : "Lỗ"}
-                              </Badge>
-                            </div>
-                            <div className="space-y-1 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  ROI:
-                                </span>
-                                <span
-                                  className={`font-semibold ${
-                                    (result.roiHangNam || 0) > 0
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }`}
-                                >
-                                  {(result.roiHangNam || 0).toFixed(1)}%
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  Dòng tiền:
-                                </span>
-                                <span
-                                  className={`font-semibold ${
-                                    (result.steps.dongTienRongBDS || 0) > 0
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }`}
-                                >
-                                  {(
-                                    (result.steps.dongTienRongBDS || 0) /
-                                    1000000
-                                  ).toFixed(1)}
-                                  M ₫
-                                </span>
-                              </div>
-                              <div className="text-xs text-muted-foreground pt-1 border-t">
-                                {new Date(
-                                  result.calculatedAt || ""
-                                ).toLocaleDateString("vi-VN")}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Main Input Form */}
-            <div data-form="property-input">
-              <PropertyInputForm
-                onCalculate={handleCalculateWithConfirm}
-                initialValues={appState.selectedPreset?.inputs}
-                selectedPreset={appState.selectedPreset}
-                isLoading={appState.isCalculating}
-                mode={appState.mode}
-              />
-            </div>
-
-            {/* Results Section */}
-            {appState.currentResult && appState.viewState === "RESULTS" && (
-              <div className="space-y-6">
-                <CalculationResults result={appState.currentResult} />
-                <AIAdvisorySystem
-                  result={appState.currentResult}
-                  onTimelineUpgrade={() => handleModeSwitch("TIMELINE")}
+            {/* ===== MAIN CALCULATION FORM ===== */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <PropertyInputForm
+                  onCalculate={handleCalculateWithConfirm}
+                  isLoading={appState.isCalculating}
+                  showTimelineToggle={false}
+                  selectedPreset={appState.selectedPreset}
                 />
-                {renderTimelineUpgradeCard}
               </div>
-            )}
 
-            {/* Scenario Comparison */}
-            {showComparison && appState.calculationHistory.length > 1 && (
-              <ScenarioComparison
-                results={appState.calculationHistory.slice(0, 4)}
-              />
-            )}
+              <div className="space-y-6">
+                {/* Quick Stats */}
+                {hasCalculationHistory && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" />
+                        Lịch Sử Tính Toán
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {appState.calculationHistory
+                          .slice(0, 3)
+                          .map((calc, index) => (
+                            <div
+                              key={calc.calculationId || index}
+                              className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                              onClick={() => {
+                                setAppState((prev) => ({
+                                  ...prev,
+                                  currentResult: calc,
+                                  showResultsModal: true,
+                                }));
+                              }}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="text-sm font-medium">
+                                    {calc.inputs.giaTriBDS
+                                      ? `${(
+                                          calc.inputs.giaTriBDS / 1000000000
+                                        ).toFixed(1)}B VND`
+                                      : "N/A"}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {calc.calculatedAt
+                                      ? new Date(
+                                          calc.calculatedAt
+                                        ).toLocaleDateString("vi-VN")
+                                      : "N/A"}
+                                  </div>
+                                </div>
+                                <Badge
+                                  variant={
+                                    (calc.steps?.dongTienRongBDS || 0) > 0
+                                      ? "default"
+                                      : "destructive"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {(calc.roiHangNam || 0).toFixed(1)}% ROI
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+
+                      {hasCalculationHistory && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-3"
+                          onClick={() => setShowComparison(true)}
+                        >
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          So sánh kịch bản
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* AI Advisory */}
+                {currentCalculation && (
+                  <AIAdvisorySystem
+                    result={currentCalculation}
+                    onTimelineUpgrade={handleUpgradeToTimeline}
+                  />
+                )}
+
+                {/* Feature Highlights */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5" />
+                      Tính Năng Nổi Bật
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Tính toán ROI chính xác</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Phân tích dòng tiền chi tiết</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Cảnh báo rủi ro thông minh</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Zap className="h-4 w-4 text-blue-500" />
+                        <span>AI Advisory System</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Rocket className="h-4 w-4 text-purple-500" />
+                        <span>Timeline Mode (Pro)</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
 
         {/* ===== TIMELINE MODE ===== */}
         {appState.mode === "TIMELINE" && (
-          <div className="space-y-6">
-            {/* Timeline Mode Header */}
-            <Alert className="border-blue-200 bg-blue-50">
-              <Calendar className="h-4 w-4" />
-              <AlertDescription className="text-blue-800">
-                <strong>Timeline Mode:</strong> Phân tích 240 tháng với events
-                và tối ưu hóa tự động.
-                {!appState.currentInputs &&
-                  " Vui lòng nhập thông tin bất động sản để bắt đầu."}
-              </AlertDescription>
-            </Alert>
-
-            {/* Timeline Dashboard */}
-            {appState.currentInputs ? (
-              <TimelineDashboard
-                initialInputs={appState.currentInputs}
-                initialResult={appState.currentResult || undefined}
-                onScenarioSave={handleTimelineScenarioSave}
-                onScenarioLoad={handleTimelineScenarioLoad}
-                mode="INTEGRATED"
-              />
-            ) : (
-              <Card className="border-dashed border-2 border-blue-200">
-                <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
-                  <div className="p-4 bg-blue-100 rounded-full">
-                    <Calendar className="h-12 w-12 text-blue-600" />
-                  </div>
-                  <div className="text-center space-y-2">
-                    <h3 className="text-lg font-semibold">
-                      Bắt đầu với Timeline
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Chuyển về Classic Mode để nhập thông tin bất động sản
-                      trước
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleModeSwitch("CLASSIC")}
-                    variant="outline"
-                  >
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Chuyển về Classic Mode
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ===== CALCULATION CONFIRMATION DIALOG ===== */}
-      <Dialog
-        open={showCalculationConfirm}
-        onOpenChange={setShowCalculationConfirm}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-blue-600" />
-              Xác nhận tính toán
-            </DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn thực hiện phân tích đầu tư bất động sản này
-              không?
-            </DialogDescription>
-          </DialogHeader>
-
-          {pendingCalculation && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <h4 className="font-semibold text-sm">
-                  Thông tin sẽ được phân tích:
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="space-y-8">
+            <Card className="border-purple-200 bg-purple-50">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-6 w-6 text-purple-600" />
                   <div>
-                    <span className="text-muted-foreground">Giá BDS:</span>
-                    <span className="ml-2 font-medium">
-                      {(pendingCalculation.giaTriBDS / 1000000000).toFixed(1)}B
-                      ₫
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Tiền thuê:</span>
-                    <span className="ml-2 font-medium text-green-600">
-                      {(pendingCalculation.tienThueThang / 1000000).toFixed(0)}M
-                      ₫/tháng
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Vay:</span>
-                    <span className="ml-2 font-medium">
-                      {pendingCalculation.tyLeVay}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Thời gian:</span>
-                    <span className="ml-2 font-medium">
-                      {pendingCalculation.thoiGianVay} năm
-                    </span>
+                    <CardTitle className="text-purple-800">
+                      Timeline Mode - Phân tích 240 tháng
+                    </CardTitle>
+                    <CardDescription className="text-purple-600">
+                      Mô phỏng chi tiết với events và scenarios
+                    </CardDescription>
                   </div>
                 </div>
-              </div>
+              </CardHeader>
+            </Card>
 
-              <Alert className="border-blue-200 bg-blue-50">
-                <Lightbulb className="h-4 w-4" />
-                <AlertDescription className="text-blue-800">
-                  <strong>Miễn phí:</strong> Tính toán này hoàn toàn miễn phí và
-                  không giới hạn số lần sử dụng.
-                </AlertDescription>
-              </Alert>
+            <TimelineDashboard />
+          </div>
+        )}
 
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowCalculationConfirm(false);
-                    setPendingCalculation(null);
-                  }}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (pendingCalculation) {
-                      handleCalculate(pendingCalculation);
-                    }
-                    setShowCalculationConfirm(false);
-                    setPendingCalculation(null);
-                  }}
-                  disabled={appState.isCalculating}
-                >
-                  {appState.isCalculating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Đang tính toán...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Bắt đầu phân tích
-                    </>
-                  )}
-                </Button>
-              </div>
+        {/* ===== MODALS ===== */}
+
+        {/* ✅ NEW: Results Modal */}
+        <CalculationResultsModal
+          result={appState.currentResult}
+          isOpen={appState.showResultsModal}
+          onClose={handleCloseResultsModal}
+          onNewCalculation={handleNewCalculation}
+          onUpgradeToTimeline={handleUpgradeToTimeline}
+        />
+
+        {/* Calculation Confirmation Dialog */}
+        <Dialog
+          open={showCalculationConfirm}
+          onOpenChange={setShowCalculationConfirm}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận tính toán</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn thực hiện tính toán với dữ liệu hiện tại?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowCalculationConfirm(false)}
+              >
+                Hủy
+              </Button>
+              <Button onClick={handleConfirmCalculation}>
+                {appState.isCalculating && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Xác nhận
+              </Button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+
+        {/* Scenario Comparison Modal */}
+        {showComparison && (
+          <Dialog open={showComparison} onOpenChange={setShowComparison}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>So sánh kịch bản</DialogTitle>
+                <DialogDescription>
+                  Phân tích và so sánh các kịch bản đầu tư
+                </DialogDescription>
+              </DialogHeader>
+              <div className="overflow-auto">
+                <ScenarioComparison scenarios={appState.calculationHistory} />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
     </div>
   );
 }
