@@ -63,7 +63,6 @@ import { calculateRealEstateInvestment } from "@/lib/real-estate-calculator";
 // ===== ENHANCED PROPS INTERFACE =====
 interface AIAdvisorySystemProps {
   result: CalculationResult;
-  onScenarioGenerated?: (scenarios: ScenarioAnalysis) => void;
 }
 
 interface RiskAssessment {
@@ -114,10 +113,7 @@ interface ChecklistItem {
 
 
 // ===== MAIN COMPONENT =====
-export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
-  result,
-  onScenarioGenerated,
-}) => {
+export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({ result }) => {
   // ===== STATE =====
   const [activeSection, setActiveSection] = useState<"risk" | "scenarios" | "checklist">("risk");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -330,9 +326,8 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
       const analysis = generateScenarios(result.inputs, result);
       setScenarioAnalysis(analysis);
       setIsAnalyzing(false);
-      onScenarioGenerated?.(analysis);
     }, 2000);
-  }, [result, generateScenarios, onScenarioGenerated]);
+  }, [result, generateScenarios]);
 
   // ===== UTILITY FUNCTIONS =====
   const getRiskLevelColor = (level: string) => {
@@ -525,9 +520,6 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
           </Card>
         )}
 
-        {/* The rest of the existing functionality for scenarios and checklist would go here */}
-        {/* I've focused on the Timeline integration part as requested */}
-        
       </div>
     </TooltipProvider>
   );

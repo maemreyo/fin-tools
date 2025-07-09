@@ -70,7 +70,6 @@ interface CalculationResultsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNewCalculation?: () => void;
-
 }
 
 // Color scheme cho charts
@@ -97,7 +96,6 @@ export default function CalculationResultsModal({
   isOpen,
   onClose,
   onNewCalculation,
-
 }: CalculationResultsModalProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -227,7 +225,6 @@ Tạo bởi Real Estate Calculator - ${new Date().toLocaleDateString('vi-VN')}
                 <Download className="h-4 w-4 mr-1" />
                 Export
               </Button>
-             
             </div>
           </div>
         </DialogHeader>

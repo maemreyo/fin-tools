@@ -199,8 +199,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
 ];
 
 // ===== INTERFACE TYPES =====
-type CalculatorMode = "CLASSIC" | "TIMELINE";
-type ViewState = "INPUT" | "RESULTS" | "TIMELINE";
+type CalculatorMode = "CLASSIC";
+type ViewState = "INPUT" | "RESULTS";
 
 interface AppState {
   mode: CalculatorMode;
@@ -209,9 +209,7 @@ interface AppState {
   currentResult: CalculationResult | null;
   selectedPreset: PresetScenario | null;
   calculationHistory: CalculationResult[];
-  timelineScenarios: TimelineScenario[];
   isCalculating: boolean;
-  hasTimelineAccess: boolean;
 }
 
 // ===== MAIN COMPONENT =====
@@ -224,9 +222,7 @@ export default function EnhancedRealEstateCalculatorPage() {
     currentResult: null,
     selectedPreset: null,
     calculationHistory: [],
-    timelineScenarios: [],
     isCalculating: false,
-    hasTimelineAccess: true,
   });
 
   // UI State
@@ -239,7 +235,6 @@ export default function EnhancedRealEstateCalculatorPage() {
   // ===== LOAD SAVED DATA =====
   useEffect(() => {
     const savedHistory = localStorage.getItem("calculation-history");
-    const savedScenarios = localStorage.getItem("timeline-scenarios");
 
     if (savedHistory) {
       try {
@@ -247,15 +242,6 @@ export default function EnhancedRealEstateCalculatorPage() {
         setAppState((prev) => ({ ...prev, calculationHistory: history }));
       } catch (error) {
         console.error("Failed to load calculation history:", error);
-      }
-    }
-
-    if (savedScenarios) {
-      try {
-        const scenarios = JSON.parse(savedScenarios);
-        setAppState((prev) => ({ ...prev, timelineScenarios: scenarios }));
-      } catch (error) {
-        console.error("Failed to load timeline scenarios:", error);
       }
     }
   }, []);
@@ -684,7 +670,6 @@ export default function EnhancedRealEstateCalculatorPage() {
                 initialValues={appState.selectedPreset?.inputs}
                 selectedPreset={appState.selectedPreset}
                 isLoading={appState.isCalculating}
-                mode={appState.mode}
               />
             </div>
 
