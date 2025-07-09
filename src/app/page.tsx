@@ -53,7 +53,7 @@ import {
 } from "lucide-react";
 
 import PropertyInputForm from "@/components/PropertyInputForm";
-import CalculationResults from "@/components/CalculationResults";
+import CalculationResultsModal from "@/components/CalculationResultsModal";
 import ScenarioComparison from "@/components/ScenarioComparison";
 import { AIAdvisorySystem } from "@/components/AIAdvisorySystem";
 import {
@@ -231,6 +231,8 @@ export default function EnhancedRealEstateCalculatorPage() {
   const [showCalculationConfirm, setShowCalculationConfirm] = useState(false);
   const [pendingCalculation, setPendingCalculation] =
     useState<RealEstateInputs | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<CalculationResult | null>(null);
 
   // ===== LOAD SAVED DATA =====
   useEffect(() => {
@@ -271,13 +273,16 @@ export default function EnhancedRealEstateCalculatorPage() {
           ...prev,
           currentInputs: inputs,
           currentResult: enhancedResult,
-          viewState: "RESULTS",
+          viewState: "INPUT",
           isCalculating: false,
           calculationHistory: [
             enhancedResult,
             ...prev.calculationHistory.slice(0, 9),
           ], // Keep last 10
         }));
+
+        setSelectedResult(enhancedResult);
+        setIsModalOpen(true);
 
         // Save to localStorage
         const newHistory = [
@@ -590,13 +595,10 @@ export default function EnhancedRealEstateCalculatorPage() {
                         <Card
                           key={result.calculationId || index}
                           className="cursor-pointer hover:shadow-sm transition-all border-gray-200"
-                          onClick={() =>
-                            setAppState((prev) => ({
-                              ...prev,
-                              currentResult: result,
-                              viewState: "RESULTS",
-                            }))
-                          }
+                          onClick={() => {
+                            setSelectedResult(result);
+                            setIsModalOpen(true);
+                          }}
                         >
                           <CardContent className="p-3">
                             <div className="flex items-center justify-between mb-2">
@@ -673,13 +675,7 @@ export default function EnhancedRealEstateCalculatorPage() {
               />
             </div>
 
-            {/* Results Section */}
-            {appState.currentResult && appState.viewState === "RESULTS" && (
-              <div className="space-y-6">
-                <CalculationResults result={appState.currentResult} />
-                <AIAdvisorySystem result={appState.currentResult} />
-              </div>
-            )}
+            
 
             {/* Scenario Comparison */}
             {showComparison && appState.calculationHistory.length > 1 && (
@@ -690,6 +686,16 @@ export default function EnhancedRealEstateCalculatorPage() {
           </div>
         )}
       </div>
+
+      <CalculationResultsModal
+        result={selectedResult}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onNewCalculation={() => {
+          setIsModalOpen(false);
+          setAppState((prev) => ({ ...prev, viewState: "INPUT" }));
+        }}
+      />
 
       {/* ===== CALCULATION CONFIRMATION DIALOG ===== */}
       <Dialog
