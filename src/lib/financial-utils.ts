@@ -282,8 +282,8 @@ export function validateFinancialInputs(inputs: {
     errors.push('Tỷ lệ vay phải từ 0% đến 100%');
   }
   
-  if (inputs.thoiGianVay < 1 || inputs.thoiGianVay > 30) {
-    errors.push('Thời gian vay phải từ 1 năm đến 30 năm');
+  if (inputs.thoiGianVay < 1 || inputs.thoiGianVay > 50) {
+    errors.push('Thời gian vay phải từ 1 năm đến 50 năm');
   }
   
   return errors;

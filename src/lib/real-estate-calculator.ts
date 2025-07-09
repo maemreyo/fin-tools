@@ -13,23 +13,30 @@ import {
  * "Phân Tích Sâu Logic & Công Thức Tính Dòng Tiền Bất Động Sản"
  */
 export function calculateRealEstateInvestment(inputs: RealEstateInputs): CalculationResult {
+  // Ensure optional fields have default values
+  const normalizedInputs: RealEstateInputs = {
+    ...inputs,
+    thuNhapKhac: inputs.thuNhapKhac || 0,
+    chiPhiSinhHoat: inputs.chiPhiSinhHoat || 0,
+  };
+
   // Validate inputs trước khi tính toán
-  const validationErrors = validateInputs(inputs);
+  const validationErrors = validateInputs(normalizedInputs);
   if (validationErrors.length > 0) {
     throw new Error(`Lỗi dữ liệu đầu vào: ${validationErrors.join(', ')}`);
   }
 
   // BƯỚC 1: Tính Tổng Vốn Đầu Tư Ban Đầu (Total Initial Investment)
-  const step1 = calculateInitialInvestment(inputs);
+  const step1 = calculateInitialInvestment(normalizedInputs);
   
   // BƯỚC 2: Tính Tổng Chi Phí Vận Hành Hàng Tháng (Total Monthly Operating Expenses)
-  const step2 = calculateMonthlyOperatingExpenses(inputs, step1.soTienVay);
+  const step2 = calculateMonthlyOperatingExpenses(normalizedInputs, step1.soTienVay);
   
   // BƯỚC 3: Tính Dòng Tiền Ròng Từ Bất Động Sản (Property's Net Cash Flow)
-  const step3 = calculatePropertyNetCashFlow(inputs, step2.tongChiPhiVanHanh);
+  const step3 = calculatePropertyNetCashFlow(normalizedInputs, step2.tongChiPhiVanHanh);
   
   // BƯỚC 4: Tính Dòng Tiền Cuối Cùng (Final Personal Cash Flow)
-  const step4 = calculateFinalCashFlow(inputs, step3.dongTienRongBDS);
+  const step4 = calculateFinalCashFlow(normalizedInputs, step3.dongTienRongBDS);
   
   // Gộp tất cả kết quả steps
   const steps: CalculationSteps = {
@@ -40,14 +47,14 @@ export function calculateRealEstateInvestment(inputs: RealEstateInputs): Calcula
   };
   
   // Phân tích bổ sung
-  const analysis = calculateAdvancedMetrics(inputs, steps);
+  const analysis = calculateAdvancedMetrics(normalizedInputs, steps);
   
   // Cảnh báo và gợi ý
-  const warnings = generateWarnings(inputs, steps);
-  const suggestions = generateSuggestions(inputs, steps);
+  const warnings = generateWarnings(normalizedInputs, steps);
+  const suggestions = generateSuggestions(normalizedInputs, steps);
   
   return {
-    inputs,
+    inputs: normalizedInputs,
     steps,
     ...analysis,
     warnings,
@@ -283,12 +290,13 @@ function validateInputs(inputs: RealEstateInputs): string[] {
     errors.push('Giá trị BĐS phải lớn hơn 0');
   }
   
-  if (!inputs.thuNhapKhac || inputs.thuNhapKhac < 0) {
-    errors.push('Thu nhập khác phải được nhập và không âm');
+  // Thu nhập khác và chi phí sinh hoạt là optional, default = 0
+  if (inputs.thuNhapKhac < 0) {
+    errors.push('Thu nhập khác không được âm');
   }
   
-  if (!inputs.chiPhiSinhHoat || inputs.chiPhiSinhHoat < 0) {
-    errors.push('Chi phí sinh hoạt phải được nhập và không âm');
+  if (inputs.chiPhiSinhHoat < 0) {
+    errors.push('Chi phí sinh hoạt không được âm');
   }
   
   if (!inputs.thoiGianVay || inputs.thoiGianVay <= 0) {

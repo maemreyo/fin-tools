@@ -253,7 +253,8 @@ export default function EnhancedRealEstateCalculatorPage() {
   const [showPresets, setShowPresets] = useState(true);
   const [showComparison, setShowComparison] = useState(false);
   const [showCalculationConfirm, setShowCalculationConfirm] = useState(false);
-  const [pendingCalculation, setPendingCalculation] = useState<RealEstateInputs | null>(null);
+  const [pendingCalculation, setPendingCalculation] =
+    useState<RealEstateInputs | null>(null);
 
   // ===== LOAD SAVED DATA =====
   useEffect(() => {
@@ -398,41 +399,46 @@ export default function EnhancedRealEstateCalculatorPage() {
   );
 
   // ===== PRESET HANDLERS =====
-  const handlePresetSelect = useCallback((preset: PresetScenario) => {
-    setAppState((prev) => ({ 
-      ...prev, 
-      selectedPreset: preset,
-      viewState: "INPUT" // Ensure we're in input view
-    }));
-    setShowPresets(false);
+  const handlePresetSelect = useCallback(
+    (preset: PresetScenario) => {
+      setAppState((prev) => ({
+        ...prev,
+        selectedPreset: preset,
+        viewState: "INPUT", // Ensure we're in input view
+      }));
+      setShowPresets(false);
 
-    // Enhanced toast with action buttons
-    toast.success("✅ Đã tải template thành công!", {
-      description: `${preset.name} - Dữ liệu đã được điền vào form`,
-      action: {
-        label: "Tính toán ngay",
-        onClick: () => {
-          // Auto-calculate if user wants
-          if (preset.inputs) {
-            handleCalculate(preset.inputs as RealEstateInputs);
-          }
+      // Enhanced toast with action buttons
+      toast.success("✅ Đã tải template thành công!", {
+        description: `${preset.name} - Dữ liệu đã được điền vào form`,
+        action: {
+          label: "Tính toán ngay",
+          onClick: () => {
+            // Auto-calculate if user wants
+            if (preset.inputs) {
+              handleCalculate(preset.inputs as RealEstateInputs);
+            }
+          },
         },
-      },
-      duration: 5000,
-    });
+        duration: 5000,
+      });
 
-    // Smooth scroll to form
-    setTimeout(() => {
-      const formElement = document.querySelector('[data-form="property-input"]');
-      if (formElement) {
-        formElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start',
-          inline: 'nearest' 
-        });
-      }
-    }, 100);
-  }, [handleCalculate]);
+      // Smooth scroll to form
+      setTimeout(() => {
+        const formElement = document.querySelector(
+          '[data-form="property-input"]'
+        );
+        if (formElement) {
+          formElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+            inline: "nearest",
+          });
+        }
+      }, 100);
+    },
+    [handleCalculate]
+  );
 
   // ===== UPGRADE TO TIMELINE =====
   const renderTimelineUpgradeCard = useMemo(() => {
@@ -539,8 +545,8 @@ export default function EnhancedRealEstateCalculatorPage() {
                 <span className="font-semibold text-blue-600">
                   Hiểu bạn như chính bạn.
                 </span>{" "}
-                Chỉ cần giá nhà và số tiền bạn có - chúng tôi sẽ tính toán tất cả
-                còn lại.
+                Chỉ cần giá nhà và số tiền bạn có - chúng tôi sẽ tính toán tất
+                cả còn lại.
               </p>
               <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
                 <div className="flex items-center gap-2">
@@ -556,40 +562,50 @@ export default function EnhancedRealEstateCalculatorPage() {
                   <span>Gợi ý tối ưu hóa</span>
                 </div>
               </div>
-              
+
               {/* Enhanced Stats Section */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
                   <div className="flex items-center gap-2 mb-2">
                     <Calculator className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-blue-900">Tính toán</span>
+                    <span className="font-semibold text-blue-900">
+                      Tính toán
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-blue-600">
                     {appState.calculationHistory.length}
                   </p>
-                  <p className="text-sm text-blue-700">Phân tích đã thực hiện</p>
+                  <p className="text-sm text-blue-700">
+                    Phân tích đã thực hiện
+                  </p>
                 </div>
-                
+
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold text-green-900">Timeline</span>
+                    <span className="font-semibold text-green-900">
+                      Timeline
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-green-600">
                     {appState.timelineScenarios.length}
                   </p>
                   <p className="text-sm text-green-700">Kịch bản đã lưu</p>
                 </div>
-                
+
                 <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-100">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="h-5 w-5 text-purple-600" />
-                    <span className="font-semibold text-purple-900">AI Insights</span>
+                    <span className="font-semibold text-purple-900">
+                      AI Insights
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-purple-600">
                     {appState.currentResult ? "Sẵn sàng" : "Chờ dữ liệu"}
                   </p>
-                  <p className="text-sm text-purple-700">Trạng thái phân tích</p>
+                  <p className="text-sm text-purple-700">
+                    Trạng thái phân tích
+                  </p>
                 </div>
               </div>
             </div>
@@ -656,9 +672,9 @@ export default function EnhancedRealEstateCalculatorPage() {
                       <Card
                         key={preset.id}
                         className={`cursor-pointer hover:shadow-lg transition-all duration-200 bg-white group ${
-                          appState.selectedPreset?.id === preset.id 
-                            ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' 
-                            : 'border-amber-200 hover:border-amber-400'
+                          appState.selectedPreset?.id === preset.id
+                            ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
+                            : "border-amber-200 hover:border-amber-400"
                         }`}
                         onClick={() => handlePresetSelect(preset)}
                       >
@@ -682,21 +698,34 @@ export default function EnhancedRealEstateCalculatorPage() {
                             {/* Key Metrics Preview */}
                             <div className="space-y-2 text-xs">
                               <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Giá BDS:</span>
+                                <span className="text-muted-foreground">
+                                  Giá BDS:
+                                </span>
                                 <span className="font-medium">
-                                  {(preset.inputs.giaTriBDS / 1000000000).toFixed(1)}B ₫
+                                  {(
+                                    preset.inputs.giaTriBDS / 1000000000
+                                  ).toFixed(1)}
+                                  B ₫
                                 </span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Tiền thuê:</span>
+                                <span className="text-muted-foreground">
+                                  Tiền thuê:
+                                </span>
                                 <span className="font-medium text-green-600">
-                                  {(preset.inputs.tienThueThang / 1000000).toFixed(0)}M ₫/tháng
+                                  {(
+                                    preset.inputs.tienThueThang / 1000000
+                                  ).toFixed(0)}
+                                  M ₫/tháng
                                 </span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Vay:</span>
+                                <span className="text-muted-foreground">
+                                  Vay:
+                                </span>
                                 <span className="font-medium">
-                                  {preset.inputs.tyLeVay}% - {preset.inputs.thoiGianVay} năm
+                                  {preset.inputs.tyLeVay}% -{" "}
+                                  {preset.inputs.thoiGianVay} năm
                                 </span>
                               </div>
                             </div>
@@ -910,7 +939,10 @@ export default function EnhancedRealEstateCalculatorPage() {
       </div>
 
       {/* ===== CALCULATION CONFIRMATION DIALOG ===== */}
-      <Dialog open={showCalculationConfirm} onOpenChange={setShowCalculationConfirm}>
+      <Dialog
+        open={showCalculationConfirm}
+        onOpenChange={setShowCalculationConfirm}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -918,25 +950,30 @@ export default function EnhancedRealEstateCalculatorPage() {
               Xác nhận tính toán
             </DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn thực hiện phân tích đầu tư bất động sản này không?
+              Bạn có chắc chắn muốn thực hiện phân tích đầu tư bất động sản này
+              không?
             </DialogDescription>
           </DialogHeader>
-          
+
           {pendingCalculation && (
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <h4 className="font-semibold text-sm">Thông tin sẽ được phân tích:</h4>
+                <h4 className="font-semibold text-sm">
+                  Thông tin sẽ được phân tích:
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-muted-foreground">Giá BDS:</span>
                     <span className="ml-2 font-medium">
-                      {(pendingCalculation.giaTriBDS / 1000000000).toFixed(1)}B ₫
+                      {(pendingCalculation.giaTriBDS / 1000000000).toFixed(1)}B
+                      ₫
                     </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Tiền thuê:</span>
                     <span className="ml-2 font-medium text-green-600">
-                      {(pendingCalculation.tienThueThang / 1000000).toFixed(0)}M ₫/tháng
+                      {(pendingCalculation.tienThueThang / 1000000).toFixed(0)}M
+                      ₫/tháng
                     </span>
                   </div>
                   <div>
@@ -957,7 +994,8 @@ export default function EnhancedRealEstateCalculatorPage() {
               <Alert className="border-blue-200 bg-blue-50">
                 <Lightbulb className="h-4 w-4" />
                 <AlertDescription className="text-blue-800">
-                  <strong>Miễn phí:</strong> Tính toán này hoàn toàn miễn phí và không giới hạn số lần sử dụng.
+                  <strong>Miễn phí:</strong> Tính toán này hoàn toàn miễn phí và
+                  không giới hạn số lần sử dụng.
                 </AlertDescription>
               </Alert>
 

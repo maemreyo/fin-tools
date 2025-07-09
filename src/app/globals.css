@@ -120,3 +120,92 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ===== SONNER TOAST CUSTOMIZATION ===== */
+/* Ensure solid, non-transparent backgrounds for better visibility */
+@layer components {
+  /* Main toast container */
+  [data-sonner-toast] {
+    background: var(--normal-bg) !important;
+    border: 1px solid var(--normal-border) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* Success toasts */
+  [data-sonner-toast][data-type="success"] {
+    background: var(--success-bg) !important;
+    color: var(--success-text) !important;
+    border-color: var(--success-bg) !important;
+  }
+
+  /* Error toasts */
+  [data-sonner-toast][data-type="error"] {
+    background: var(--error-bg) !important;
+    color: var(--error-text) !important;
+    border-color: var(--error-bg) !important;
+  }
+
+  /* Warning toasts */
+  [data-sonner-toast][data-type="warning"] {
+    background: var(--warning-bg) !important;
+    color: var(--warning-text) !important;
+    border-color: var(--warning-bg) !important;
+  }
+
+  /* Info toasts */
+  [data-sonner-toast][data-type="info"] {
+    background: var(--info-bg) !important;
+    color: var(--info-text) !important;
+    border-color: var(--info-bg) !important;
+  }
+
+  /* Toast content */
+  [data-sonner-toast] [data-content] {
+    color: inherit !important;
+  }
+
+  /* Toast title */
+  [data-sonner-toast] [data-title] {
+    color: inherit !important;
+    font-weight: 500;
+  }
+
+  /* Toast description */
+  [data-sonner-toast] [data-description] {
+    color: inherit !important;
+    opacity: 0.8;
+  }
+
+  /* Remove any transparency from the toaster container */
+  .toaster {
+    --normal-bg: hsl(var(--background));
+    --normal-text: hsl(var(--foreground));
+    --normal-border: hsl(var(--border));
+  }
+
+  /* Dark mode specific overrides */
+  .dark .toaster {
+    --normal-bg: hsl(var(--background));
+    --success-bg: hsl(142 76% 15%);
+    --success-text: hsl(142 76% 85%);
+    --error-bg: hsl(0 84% 15%);
+    --error-text: hsl(0 84% 85%);
+    --warning-bg: hsl(38 92% 15%);
+    --warning-text: hsl(38 92% 85%);
+    --info-bg: hsl(217 91% 15%);
+    --info-text: hsl(217 91% 85%);
+  }
+
+  /* Light mode specific overrides */
+  .toaster {
+    --success-bg: hsl(142 76% 95%);
+    --success-text: hsl(142 76% 25%);
+    --error-bg: hsl(0 84% 95%);
+    --error-text: hsl(0 84% 25%);
+    --warning-bg: hsl(38 92% 95%);
+    --warning-text: hsl(38 92% 25%);
+    --info-bg: hsl(217 91% 95%);
+    --info-text: hsl(217 91% 25%);
+  }
+}

@@ -219,6 +219,60 @@ const PercentageInput: React.FC<{
   );
 };
 
+// ===== STEP INDICATOR COMPONENT =====
+const StepIndicator: React.FC<{
+  currentStep: number;
+  completedSteps: Set<number>;
+  onStepClick: (step: number) => void;
+}> = ({ currentStep, completedSteps, onStepClick }) => {
+  const steps = [
+    { id: 1, title: "Thông tin BĐS", description: "Giá trị & vốn tự có" },
+    { id: 2, title: "Thu nhập dự kiến", description: "Tiền thuê & setup" },
+    { id: 3, title: "Tài chính cá nhân", description: "Thu nhập & chi phí" }
+  ];
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <React.Fragment key={step.id}>
+            <div 
+              className={`flex items-center cursor-pointer group ${
+                currentStep === step.id ? 'text-blue-600' : 
+                completedSteps.has(step.id) ? 'text-green-600' : 'text-gray-400'
+              }`}
+              onClick={() => onStepClick(step.id)}
+            >
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
+                currentStep === step.id 
+                  ? 'border-blue-600 bg-blue-50' 
+                  : completedSteps.has(step.id)
+                  ? 'border-green-600 bg-green-50'
+                  : 'border-gray-300 bg-white group-hover:border-gray-400'
+              }`}>
+                {completedSteps.has(step.id) ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <span className="text-sm font-medium">{step.id}</span>
+                )}
+              </div>
+              <div className="ml-3 hidden sm:block">
+                <div className="text-sm font-medium">{step.title}</div>
+                <div className="text-xs text-muted-foreground">{step.description}</div>
+              </div>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-4 ${
+                completedSteps.has(step.id) ? 'bg-green-300' : 'bg-gray-200'
+              }`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ===== MAIN ENHANCED COMPONENT =====
 export default function EnhancedPropertyInputForm({
   onCalculate,
@@ -237,6 +291,9 @@ export default function EnhancedPropertyInputForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [isTimelineReady, setIsTimelineReady] = useState(false);
   const [presetLoaded, setPresetLoaded] = useState<string | null>(null);
+  
+  // ===== PROGRESSIVE DISCLOSURE STATE =====
+  // completedSteps is now computed via useMemo to avoid infinite loops
 
   // ===== FORM SETUP =====
   const form = useForm<TimelineEnabledInputs>({
@@ -297,6 +354,11 @@ export default function EnhancedPropertyInputForm({
     }
   }, [selectedPreset, form]);
 
+  // ===== STEP NAVIGATION HANDLER =====
+  const handleStepClick = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
+
   // ===== TIMELINE MODE HANDLER =====
   const handleTimelineModeToggle = useCallback((enabled: boolean) => {
     setTimelineMode(enabled);
@@ -306,6 +368,30 @@ export default function EnhancedPropertyInputForm({
       form.setValue('timelineStartDate', new Date());
     }
   }, [form, watchedValues.timelineStartDate]);
+
+  // ===== STEP COMPLETION LOGIC =====
+  const stepValidation = useMemo(() => {
+    const giaTriBDS = watchedValues.giaTriBDS || 0;
+    const vonTuCo = watchedValues.vonTuCo || 0;
+    const tienThueThang = watchedValues.tienThueThang || 0;
+    const chiPhiTrangBi = watchedValues.chiPhiTrangBi || 0;
+    
+    return {
+      step1: giaTriBDS > 0 && vonTuCo >= 0, // Basic property info
+      step2: tienThueThang > 0, // Rental income
+      step3: true, // Personal finance (optional)
+      canCalculate: giaTriBDS > 0 && vonTuCo >= 0 // Minimum for calculation
+    };
+  }, [watchedValues]);
+
+  // Auto-update completed steps - use useMemo to avoid infinite loops
+  const completedSteps = useMemo(() => {
+    const newCompletedSteps = new Set<number>();
+    if (stepValidation.step1) newCompletedSteps.add(1);
+    if (stepValidation.step2) newCompletedSteps.add(2);
+    if (stepValidation.step3) newCompletedSteps.add(3);
+    return newCompletedSteps;
+  }, [stepValidation.step1, stepValidation.step2, stepValidation.step3]);
 
   // ===== ENHANCED CALCULATIONS =====
   const calculations = useMemo(() => {
@@ -355,6 +441,7 @@ export default function EnhancedPropertyInputForm({
     
     return {
       soTienVay,
+      vonTuCo,
       tyLeVay,
       traNoHangThangUuDai,
       traNoHangThangThaNoi,
@@ -495,7 +582,19 @@ export default function EnhancedPropertyInputForm({
           </Alert>
         )}
 
-        {/* ===== CORE PROPERTY INFORMATION ===== */}
+        {/* ===== STEP INDICATOR ===== */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <StepIndicator 
+              currentStep={currentStep}
+              completedSteps={completedSteps}
+              onStepClick={handleStepClick}
+            />
+          </CardContent>
+        </Card>
+
+        {/* ===== STEP 1: CORE PROPERTY INFORMATION ===== */}
+        {currentStep === 1 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -542,16 +641,49 @@ export default function EnhancedPropertyInputForm({
                 )}
               </div>
 
+            </div>
+
+            {/* Step Navigation */}
+            <div className="flex justify-between pt-4">
+              <div></div>
+              <Button 
+                onClick={() => handleStepClick(2)}
+                disabled={!stepValidation.step1}
+                className="flex items-center gap-2"
+              >
+                Tiếp theo: Thu nhập dự kiến
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        )}
+
+        {/* ===== STEP 2: RENTAL INCOME & SETUP ===== */}
+        {currentStep === 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Thu Nhập Dự Kiến
+            </CardTitle>
+            <CardDescription>
+              Tiền thuê và chi phí setup ban đầu
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Monthly Rent */}
               <div className="space-y-2">
                 <Label htmlFor="tienThueThang" className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
-                  Tiền thuê dự kiến/tháng
+                  Tiền thuê dự kiến/tháng *
                 </Label>
                 <SmartCurrencyInput
                   value={watchedValues.tienThueThang || 0}
                   onChange={(value) => form.setValue('tienThueThang', value)}
                   placeholder="VD: 25 triệu"
+                  tooltip="Số tiền thuê bạn dự kiến thu được mỗi tháng"
                 />
               </div>
 
@@ -565,6 +697,7 @@ export default function EnhancedPropertyInputForm({
                   value={watchedValues.chiPhiTrangBi || 0}
                   onChange={(value) => form.setValue('chiPhiTrangBi', value)}
                   placeholder="VD: 100 triệu"
+                  tooltip="Chi phí nội thất, sửa chữa để chuẩn bị cho thuê"
                 />
               </div>
             </div>
@@ -576,7 +709,7 @@ export default function EnhancedPropertyInputForm({
                   <Calculator className="h-4 w-4" />
                   <span className="font-medium">Tính toán nhanh</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                   <div>
                     <div className="text-muted-foreground">Số tiền vay</div>
                     <div className="font-semibold">{formatVND(calculations.soTienVay)}</div>
@@ -584,6 +717,10 @@ export default function EnhancedPropertyInputForm({
                   <div>
                     <div className="text-muted-foreground">Tỷ lệ vay</div>
                     <div className="font-semibold">{calculations.tyLeVay.toFixed(1)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Vốn tự có</div>
+                    <div className="font-semibold text-blue-600">{formatVND(calculations.vonTuCo)}</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Dòng tiền ước tính</div>
@@ -600,8 +737,150 @@ export default function EnhancedPropertyInputForm({
                 </div>
               </div>
             )}
+
+            {/* Step Navigation */}
+            <div className="flex justify-between pt-4">
+              <Button 
+                variant="outline"
+                onClick={() => handleStepClick(1)}
+                className="flex items-center gap-2"
+              >
+                <ArrowDown className="h-4 w-4 rotate-90" />
+                Quay lại
+              </Button>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline"
+                  onClick={() => handleStepClick(3)}
+                  className="flex items-center gap-2"
+                >
+                  Tài chính cá nhân (tùy chọn)
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button 
+                  onClick={() => onCalculate(watchedValues)}
+                  disabled={!stepValidation.canCalculate || isLoading}
+                  className="flex items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang tính toán...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="h-4 w-4" />
+                      Tính toán ngay
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
+        )}
+
+        {/* ===== STEP 3: PERSONAL FINANCE ===== */}
+        {currentStep === 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PiggyBank className="h-5 w-5" />
+              Tài Chính Cá Nhân
+            </CardTitle>
+            <CardDescription>
+              Thu nhập khác và chi phí sinh hoạt để tính dòng tiền thực tế
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Other Income */}
+              <div className="space-y-2">
+                <Label>Thu nhập khác/tháng</Label>
+                <SmartCurrencyInput
+                  value={watchedValues.thuNhapKhac || 0}
+                  onChange={(value) => form.setValue('thuNhapKhac', value)}
+                  placeholder="VD: 5,000,000"
+                  tooltip="Thu nhập từ các nguồn khác ngoài cho thuê BĐS (lương, kinh doanh, đầu tư...)"
+                />
+              </div>
+              
+              {/* Living Expenses */}
+              <div className="space-y-2">
+                <Label>Chi phí sinh hoạt/tháng</Label>
+                <SmartCurrencyInput
+                  value={watchedValues.chiPhiSinhHoat || 0}
+                  onChange={(value) => form.setValue('chiPhiSinhHoat', value)}
+                  placeholder="VD: 10,000,000"
+                  tooltip="Chi phí sinh hoạt cá nhân/gia đình hàng tháng để tính toán dòng tiền thực tế"
+                />
+              </div>
+            </div>
+
+            {/* Personal Finance Impact */}
+            {(watchedValues.thuNhapKhac > 0 || watchedValues.chiPhiSinhHoat > 0) && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lightbulb className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-900">Tác động tài chính cá nhân</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-blue-700">Thu nhập khác</div>
+                    <div className="font-semibold text-green-600">
+                      +{formatVND(watchedValues.thuNhapKhac || 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-blue-700">Chi phí sinh hoạt</div>
+                    <div className="font-semibold text-red-600">
+                      -{formatVND(watchedValues.chiPhiSinhHoat || 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-blue-700">Tác động ròng</div>
+                    <div className={`font-semibold ${
+                      (watchedValues.thuNhapKhac || 0) - (watchedValues.chiPhiSinhHoat || 0) >= 0 
+                        ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formatVND((watchedValues.thuNhapKhac || 0) - (watchedValues.chiPhiSinhHoat || 0))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step Navigation */}
+            <div className="flex justify-between pt-4">
+              <Button 
+                variant="outline"
+                onClick={() => handleStepClick(2)}
+                className="flex items-center gap-2"
+              >
+                <ArrowDown className="h-4 w-4 rotate-90" />
+                Quay lại
+              </Button>
+              <Button 
+                onClick={() => onCalculate(watchedValues)}
+                disabled={!stepValidation.canCalculate || isLoading}
+                className="flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang tính toán...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="h-4 w-4" />
+                    Tính toán với tài chính cá nhân
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        )}
 
         {/* ===== TIMELINE SETTINGS ===== */}
         {timelineMode && (
@@ -767,13 +1046,15 @@ export default function EnhancedPropertyInputForm({
           </Card>
         )}
 
-        {/* ===== LOAN DETAILS (Collapsible) ===== */}
+
+
+        {/* ===== ADVANCED SETTINGS (Always Available) ===== */}
         <Collapsible open={showLoanDetails} onOpenChange={setShowLoanDetails}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               <span className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
-                Chi tiết khoản vay
+                Chi tiết khoản vay (tùy chọn)
               </span>
               {showLoanDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
@@ -849,13 +1130,12 @@ export default function EnhancedPropertyInputForm({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* ===== ADVANCED SETTINGS (Collapsible) ===== */}
         <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               <span className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                Cài đặt nâng cao
+                Cài đặt nâng cao (tùy chọn)
               </span>
               {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
@@ -904,91 +1184,11 @@ export default function EnhancedPropertyInputForm({
                       max={50}
                     />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Thu nhập khác/tháng</Label>
-                    <SmartCurrencyInput
-                      value={watchedValues.thuNhapKhac || 0}
-                      onChange={(value) => form.setValue('thuNhapKhac', value)}
-                      placeholder="VD: 5,000,000"
-                      tooltip="Thu nhập từ các nguồn khác ngoài cho thuê BĐS (lương, kinh doanh, đầu tư...)"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Chi phí sinh hoạt/tháng</Label>
-                    <SmartCurrencyInput
-                      value={watchedValues.chiPhiSinhHoat || 0}
-                      onChange={(value) => form.setValue('chiPhiSinhHoat', value)}
-                      placeholder="VD: 10,000,000"
-                      tooltip="Chi phí sinh hoạt cá nhân/gia đình hàng tháng để tính toán dòng tiền thực tế"
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </CollapsibleContent>
         </Collapsible>
-
-        {/* ===== SUBMIT SECTION ===== */}
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {/* Timeline Ready Indicator */}
-              {timelineMode && (
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-full ${calculations.isTimelineReady ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                    {calculations.isTimelineReady ? 
-                      <CheckCircle2 className="h-5 w-5 text-green-600" /> :
-                      <Clock className="h-5 w-5 text-yellow-600" />
-                    }
-                  </div>
-                  <div>
-                    <div className="font-medium">
-                      {calculations.isTimelineReady ? 
-                        "Sẵn sàng tạo Timeline!" : 
-                        "Cần thêm thông tin để tạo Timeline"
-                      }
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Độ phức tạp: {calculations.timelineComplexity}/4 
-                      {calculations.timelineComplexity === 0 && " (Cơ bản)"}
-                      {calculations.timelineComplexity === 1 && " (Đơn giản)"}
-                      {calculations.timelineComplexity >= 2 && " (Nâng cao)"}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                // disabled={isLoading || !isValid}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : timelineMode ? (
-                  <Rocket className="h-4 w-4 mr-2" />
-                ) : (
-                  <Calculator className="h-4 w-4 mr-2" />
-                )}
-                {timelineMode ? "Tạo Timeline 240 tháng" : "Tính toán đầu tư"}
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-
-              {/* Help Text */}
-              <p className="text-sm text-muted-foreground text-center">
-                {timelineMode ? 
-                  "Timeline sẽ mô phỏng 240 tháng với events tự động và tối ưu hóa AI" :
-                  "Tính toán nhanh dựa trên thông tin bạn đã nhập"
-                }
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </form>
     </TooltipProvider>
   );
