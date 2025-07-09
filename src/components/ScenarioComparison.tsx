@@ -34,6 +34,7 @@ import {
   PolarRadiusAxis,
   Radar,
   Legend,
+  Cell,
 } from "recharts";
 import {
   TrendingUp,
@@ -443,14 +444,11 @@ export default function ScenarioComparison({
                           "Dòng tiền",
                         ]}
                       />
-                      <Bar
-                        dataKey="dongTien"
-                        fill={(entry: any) =>
-                          (entry.dongTien >= 0
-                            ? "#22c55e"
-                            : "#ef4444") as string
-                        }
-                      />
+                      <Bar dataKey="dongTien">
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.dongTien >= 0 ? "#22c55e" : "#ef4444"} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
