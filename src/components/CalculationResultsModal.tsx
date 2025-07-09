@@ -101,10 +101,13 @@ export default function CalculationResultsModal({
 
 
   // Safely get inputs and steps, providing defaults if result is null
-  const inputs = result?.inputs || {} as any;
-  const steps = result?.steps || {} as any;
-  const warnings = result?.warnings || [];
-  const suggestions = result?.suggestions || [];
+  const { inputs, steps, warnings, suggestions } = React.useMemo(() => {
+    const inputs = result?.inputs || ({} as any);
+    const steps = result?.steps || ({} as any);
+    const warnings = result?.warnings || [];
+    const suggestions = result?.suggestions || [];
+    return { inputs, steps, warnings, suggestions };
+  }, [result]);
 
   // Quick summary metrics
   const summaryMetrics = React.useMemo(() => {
@@ -534,7 +537,7 @@ Tạo bởi Real Estate Calculator - ${new Date().toLocaleDateString('vi-VN')}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"

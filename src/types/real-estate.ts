@@ -146,7 +146,8 @@ export interface CalculationResult {
   suggestions: string[];
 
   // Metadata
-  calculatedAt: Date;
+  calculatedAt: string;
+  calculationId?: string;
   scenarioName?: string;
 
   rentalYield: number; // Thu nhập từ thuê (%)

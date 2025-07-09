@@ -516,9 +516,7 @@ export default function EnhancedRealEstateCalculatorPage() {
                                   Giá BDS:
                                 </span>
                                 <span className="font-medium">
-                                  {(
-                                    preset.inputs.giaTriBDS / 1000000000
-                                  ).toFixed(1)}
+                                  {((preset.inputs.giaTriBDS ?? 0) / 1000000000).toFixed(1)}
                                   B ₫
                                 </span>
                               </div>
@@ -527,9 +525,7 @@ export default function EnhancedRealEstateCalculatorPage() {
                                   Tiền thuê:
                                 </span>
                                 <span className="font-medium text-green-600">
-                                  {(
-                                    preset.inputs.tienThueThang / 1000000
-                                  ).toFixed(0)}
+                                  {((preset.inputs.tienThueThang ?? 0) / 1000000).toFixed(0)}
                                   M ₫/tháng
                                 </span>
                               </div>
@@ -538,8 +534,8 @@ export default function EnhancedRealEstateCalculatorPage() {
                                   Vay:
                                 </span>
                                 <span className="font-medium">
-                                  {preset.inputs.tyLeVay}% -{" "}
-                                  {preset.inputs.thoiGianVay} năm
+                                  {(preset.inputs.tyLeVay ?? 0)}% -{" "}
+                                  {(preset.inputs.thoiGianVay ?? 0)} năm
                                 </span>
                               </div>
                             </div>
@@ -680,7 +676,7 @@ export default function EnhancedRealEstateCalculatorPage() {
             {/* Scenario Comparison */}
             {showComparison && appState.calculationHistory.length > 1 && (
               <ScenarioComparison
-                results={appState.calculationHistory.slice(0, 4)}
+                scenarios={appState.calculationHistory.slice(0, 4)}
               />
             )}
           </div>

@@ -273,7 +273,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({ result }) =>
 
     // Interest Rate Stress Test
     let testRate = baseInputs.laiSuatThaNoi || 10;
-    let testInputs = { ...baseInputs };
+    const testInputs = { ...baseInputs };
     while (testRate < 20) {
       testInputs.laiSuatThaNoi = testRate;
       const testResult = calculateRealEstateInvestment(testInputs);

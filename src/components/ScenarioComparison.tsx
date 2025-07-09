@@ -62,6 +62,25 @@ export default function ScenarioComparison({
   onRemoveScenario,
   onAddScenario,
 }: ScenarioComparisonProps) {
+  // Tính toán rankings
+  const rankings = React.useMemo(() => {
+    const byROI = [...scenarios].sort((a, b) => b.roiHangNam - a.roiHangNam);
+    const byCashFlow = [...scenarios].sort(
+      (a, b) => b.steps.dongTienRongBDS - a.steps.dongTienRongBDS
+    );
+    const byPayback = [...scenarios]
+      .filter((s) => s.paybackPeriod > 0)
+      .sort((a, b) => a.paybackPeriod - b.paybackPeriod);
+    const byRisk = [...scenarios].sort((a, b) => {
+      // Risk score: lower is better (higher loan ratio = higher risk)
+      const riskA = a.inputs.tyLeVay + (a.steps.dongTienCuoiCung < 0 ? 50 : 0);
+      const riskB = b.inputs.tyLeVay + (b.steps.dongTienCuoiCung < 0 ? 50 : 0);
+      return riskA - riskB;
+    });
+
+    return { byROI, byCashFlow, byPayback, byRisk };
+  }, [scenarios]);
+
   if (scenarios.length < 2) {
     return (
       <Card>
@@ -85,25 +104,6 @@ export default function ScenarioComparison({
       </Card>
     );
   }
-
-  // Tính toán rankings
-  const rankings = React.useMemo(() => {
-    const byROI = [...scenarios].sort((a, b) => b.roiHangNam - a.roiHangNam);
-    const byCashFlow = [...scenarios].sort(
-      (a, b) => b.steps.dongTienRongBDS - a.steps.dongTienRongBDS
-    );
-    const byPayback = [...scenarios]
-      .filter((s) => s.paybackPeriod > 0)
-      .sort((a, b) => a.paybackPeriod - b.paybackPeriod);
-    const byRisk = [...scenarios].sort((a, b) => {
-      // Risk score: lower is better (higher loan ratio = higher risk)
-      const riskA = a.inputs.tyLeVay + (a.steps.dongTienCuoiCung < 0 ? 50 : 0);
-      const riskB = b.inputs.tyLeVay + (b.steps.dongTienCuoiCung < 0 ? 50 : 0);
-      return riskA - riskB;
-    });
-
-    return { byROI, byCashFlow, byPayback, byRisk };
-  }, [scenarios]);
 
   // Data cho comparison table
   const comparisonData = scenarios.map((scenario, index) => ({
@@ -244,7 +244,9 @@ export default function ScenarioComparison({
               </p>
               <p className="text-sm text-blue-600">
                 {rankings.byPayback[0]
-                  ? `${(rankings.byPayback[0].paybackPeriod || 0).toFixed(1)} năm`
+                  ? `${(rankings.byPayback[0].paybackPeriod || 0).toFixed(
+                      1
+                    )} năm`
                   : "N/A"}
               </p>
             </div>
@@ -313,7 +315,7 @@ export default function ScenarioComparison({
                           <div>
                             <p className="font-semibold">{scenario.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {scenario.calculatedAt.toLocaleDateString(
+                              {new Date(scenario.calculatedAt).toLocaleDateString(
                                 "vi-VN"
                               )}
                             </p>
@@ -342,14 +344,13 @@ export default function ScenarioComparison({
                           {formatPercent(scenario.roiHangNam)}
                         </TableCell>
                         <TableCell
-                          className={`text-right ${(
-                            scenario.paybackPeriod || 0
-                          ) > 0
-                            ? getPerformanceColor(
-                                scenario.paybackPeriod || 0,
-                                "payback"
-                              )
-                            : "text-gray-400"
+                          className={`text-right ${
+                            (scenario.paybackPeriod || 0) > 0
+                              ? getPerformanceColor(
+                                  scenario.paybackPeriod || 0,
+                                  "payback"
+                                )
+                              : "text-gray-400"
                           }`}
                         >
                           {(scenario.paybackPeriod || 0) > 0
@@ -445,9 +446,9 @@ export default function ScenarioComparison({
                       <Bar
                         dataKey="dongTien"
                         fill={(entry: any) =>
-                          entry.dongTien >= 0
-                            ? ("#22c55e" as any)
-                            : ("#ef4444" as any)
+                          (entry.dongTien >= 0
+                            ? "#22c55e"
+                            : "#ef4444") as string
                         }
                       />
                     </BarChart>
@@ -574,7 +575,8 @@ export default function ScenarioComparison({
                       {rankings.byPayback[0].scenarioName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Hoàn vốn: {(rankings.byPayback[0].paybackPeriod || 0).toFixed(1)}{" "}
+                      Hoàn vốn:{" "}
+                      {(rankings.byPayback[0].paybackPeriod || 0).toFixed(1)}{" "}
                       năm - ROI:{" "}
                       {formatPercent(rankings.byPayback[0].roiHangNam || 0)}
                     </p>
