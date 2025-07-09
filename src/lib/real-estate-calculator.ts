@@ -83,7 +83,7 @@ export function calculateRealEstateInvestment(inputs: RealEstateInputs): Calcula
     ...analysis,
     warnings,
     suggestions,
-    calculatedAt: new Date()
+    calculatedAt: new Date().toISOString()
   };
 }
 
