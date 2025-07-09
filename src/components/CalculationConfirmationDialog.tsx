@@ -1,10 +1,15 @@
-
-import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calculator, Lightbulb, Loader2 } from 'lucide-react';
-import { RealEstateInputs } from '@/types/real-estate';
+import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calculator, Lightbulb, Loader2 } from "lucide-react";
+import { RealEstateInputs } from "@/types/real-estate";
 
 interface CalculationConfirmationDialogProps {
   isOpen: boolean;
@@ -15,7 +20,9 @@ interface CalculationConfirmationDialogProps {
   isCalculating: boolean;
 }
 
-export const CalculationConfirmationDialog: React.FC<CalculationConfirmationDialogProps> = ({
+export const CalculationConfirmationDialog: React.FC<
+  CalculationConfirmationDialogProps
+> = ({
   isOpen,
   onOpenChange,
   pendingCalculation,
@@ -32,7 +39,8 @@ export const CalculationConfirmationDialog: React.FC<CalculationConfirmationDial
             Xác nhận tính toán
           </DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn thực hiện phân tích đầu tư bất động sản này không?
+            Bạn có chắc chắn muốn thực hiện phân tích đầu tư bất động sản này
+            không?
           </DialogDescription>
         </DialogHeader>
 
@@ -52,13 +60,14 @@ export const CalculationConfirmationDialog: React.FC<CalculationConfirmationDial
                 <div>
                   <span className="text-muted-foreground">Tiền thuê:</span>
                   <span className="ml-2 font-medium text-green-600">
-                    {(pendingCalculation.tienThueThang / 1000000).toFixed(0)}M ₫/tháng
+                    {(pendingCalculation.tienThueThang / 1000000).toFixed(0)}M
+                    ₫/tháng
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Vay:</span>
                   <span className="ml-2 font-medium">
-                    {pendingCalculation.tyLeVay}%
+                    {pendingCalculation.tyLeVay.toFixed(2) ?? 0}%
                   </span>
                 </div>
                 <div>
@@ -73,7 +82,8 @@ export const CalculationConfirmationDialog: React.FC<CalculationConfirmationDial
             <Alert className="border-blue-200 bg-blue-50">
               <Lightbulb className="h-4 w-4" />
               <AlertDescription className="text-blue-800">
-                <strong>Miễn phí:</strong> Tính toán này hoàn toàn miễn phí và không giới hạn số lần sử dụng.
+                <strong>Miễn phí:</strong> Tính toán này hoàn toàn miễn phí và
+                không giới hạn số lần sử dụng.
               </AlertDescription>
             </Alert>
 

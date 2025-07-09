@@ -467,9 +467,14 @@ export default function EnhancedPropertyInputForm({
   // ===== FORM SUBMISSION =====
   const onSubmit = useCallback(
     (data: RealEstateInputs) => {
-      onCalculate(data);
+      // Include the calculated tyLeVay in the data before passing to onCalculate
+      const dataWithCalculatedTyLeVay = {
+        ...data,
+        tyLeVay: calculations.tyLeVay, // Add the calculated tyLeVay
+      };
+      onCalculate(dataWithCalculatedTyLeVay);
     },
-    [onCalculate]
+    [onCalculate, calculations.tyLeVay]
   );
 
   // ===== PROGRESS CALCULATION =====
