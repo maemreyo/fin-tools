@@ -58,17 +58,12 @@ import { CalculationResult, RealEstateInputs } from "@/types/real-estate";
 import { formatVND, formatPercent } from "@/lib/financial-utils";
 import { calculateRealEstateInvestment } from "@/lib/real-estate-calculator";
 
-// ===== TIMELINE INTEGRATION IMPORTS =====
-// Import timeline integration utilities
-import { IntegratedRealEstateCalculator } from "@/lib/timeline-integration";
-import { LegacyToTimelineUpgrade, SuggestedEvent } from "@/types/timeline-integration";
-import { TimelineEventType } from "@/types/timeline";
+
 
 // ===== ENHANCED PROPS INTERFACE =====
 interface AIAdvisorySystemProps {
   result: CalculationResult;
   onScenarioGenerated?: (scenarios: ScenarioAnalysis) => void;
-  onTimelineUpgrade?: () => void; // 🆕 Timeline upgrade callback
 }
 
 interface RiskAssessment {
@@ -117,109 +112,18 @@ interface ChecklistItem {
   recommendation?: string;
 }
 
-// ===== TIMELINE UPGRADE INTERFACE =====
-interface TimelineUpgradeAnalysis {
-  shouldUpgrade: boolean;
-  upgradeComplexity: 'SIMPLE' | 'MODERATE' | 'COMPLEX';
-  estimatedBenefits: {
-    accuracyImprovement: number; // %
-    optimizationPotential: number; // VND
-    riskReduction: number; // %
-  };
-  suggestedEvents: SuggestedEvent[];
-  timelinePreview: {
-    month3: number;
-    month12: number;
-    month24: number;
-    month60: number;
-  };
-}
 
 // ===== MAIN COMPONENT =====
 export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
   result,
   onScenarioGenerated,
-  onTimelineUpgrade
 }) => {
   // ===== STATE =====
-  const [activeSection, setActiveSection] = useState<"risk" | "scenarios" | "checklist" | "timeline">("timeline");
+  const [activeSection, setActiveSection] = useState<"risk" | "scenarios" | "checklist">("risk");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scenarioAnalysis, setScenarioAnalysis] = useState<ScenarioAnalysis | null>(null);
-  const [timelineUpgradeAnalysis, setTimelineUpgradeAnalysis] = useState<TimelineUpgradeAnalysis | null>(null);
-  const [isLoadingTimeline, setIsLoadingTimeline] = useState(false);
 
-  // ===== TIMELINE UPGRADE ANALYSIS =====
-  const generateTimelineUpgradeAnalysis = useCallback(async (calcResult: CalculationResult): Promise<TimelineUpgradeAnalysis> => {
-    try {
-      // Use IntegratedRealEstateCalculator to analyze upgrade potential
-      const upgrade: LegacyToTimelineUpgrade = await IntegratedRealEstateCalculator.upgradeLegacyToTimeline(calcResult);
-      
-      // Calculate potential benefits
-      const currentCashFlow = calcResult.steps.dongTienRongBDS;
-      const optimizationPotential = Math.abs(currentCashFlow) * 0.15; // Assume 15% optimization potential
-      
-      // Determine if upgrade is recommended
-      const shouldUpgrade = 
-        calcResult.roiHangNam < 12 || // Low ROI needs optimization
-        currentCashFlow < 0 || // Negative cash flow needs analysis
-        upgrade.conversionAccuracy > 75; // High confidence conversion
 
-      return {
-        shouldUpgrade,
-        upgradeComplexity: upgrade.dataQuality === 'HIGH' ? 'SIMPLE' : 
-                          upgrade.dataQuality === 'MEDIUM' ? 'MODERATE' : 'COMPLEX',
-        estimatedBenefits: {
-          accuracyImprovement: 25 + (upgrade.conversionAccuracy * 0.3),
-          optimizationPotential: optimizationPotential,
-          riskReduction: 20 + (upgrade.generatedEvents.length * 2)
-        },
-        suggestedEvents: upgrade.generatedEvents,
-        timelinePreview: {
-          month3: currentCashFlow * 3,
-          month12: currentCashFlow * 12,
-          month24: currentCashFlow * 24 * 1.05, // Slight optimization
-          month60: currentCashFlow * 60 * 1.15  // Better optimization over time
-        }
-      };
-    } catch (error) {
-      console.error('Timeline upgrade analysis failed:', error);
-      
-      // Fallback analysis
-      return {
-        shouldUpgrade: true,
-        upgradeComplexity: 'SIMPLE',
-        estimatedBenefits: {
-          accuracyImprovement: 25,
-          optimizationPotential: Math.abs(calcResult.steps.dongTienRongBDS) * 0.1,
-          riskReduction: 15
-        },
-        suggestedEvents: [],
-        timelinePreview: {
-          month3: calcResult.steps.dongTienRongBDS * 3,
-          month12: calcResult.steps.dongTienRongBDS * 12,
-          month24: calcResult.steps.dongTienRongBDS * 24,
-          month60: calcResult.steps.dongTienRongBDS * 60
-        }
-      };
-    }
-  }, []);
-
-  // Load timeline analysis when component mounts
-  useEffect(() => {
-    const loadTimelineAnalysis = async () => {
-      setIsLoadingTimeline(true);
-      try {
-        const analysis = await generateTimelineUpgradeAnalysis(result);
-        setTimelineUpgradeAnalysis(analysis);
-      } catch (error) {
-        console.error('Failed to load timeline analysis:', error);
-      } finally {
-        setIsLoadingTimeline(false);
-      }
-    };
-
-    loadTimelineAnalysis();
-  }, [result, generateTimelineUpgradeAnalysis]);
 
   // ===== RISK ASSESSMENT (Existing functionality) =====
   const riskAssessment = useMemo((): RiskAssessment => {
@@ -441,23 +345,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
     }
   };
 
-  const getComplexityColor = (complexity: string) => {
-    switch (complexity) {
-      case "SIMPLE": return "text-green-600 bg-green-50";
-      case "MODERATE": return "text-yellow-600 bg-yellow-50";
-      case "COMPLEX": return "text-orange-600 bg-orange-50";
-      default: return "text-gray-600 bg-gray-50";
-    }
-  };
 
-  const getEventTypeIcon = (eventType: TimelineEventType) => {
-    switch (eventType) {
-      case TimelineEventType.EARLY_PAYMENT: return <DollarSign className="h-4 w-4" />;
-      case TimelineEventType.CASH_FLOW_UPDATE: return <TrendingUp className="h-4 w-4" />;
-      case TimelineEventType.INTEREST_RATE_CHANGE: return <BarChart3 className="h-4 w-4" />;
-      default: return <Calendar className="h-4 w-4" />;
-    }
-  };
 
   // ===== LOADING STATE =====
   if (isAnalyzing) {
@@ -499,22 +387,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Timeline Section Button */}
-              <Button
-                variant={activeSection === "timeline" ? "default" : "outline"}
-                onClick={() => setActiveSection("timeline")}
-                className="h-auto p-4 flex flex-col items-center gap-2"
-              >
-                <Rocket className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-semibold">Timeline Mode</div>
-                  <div className="text-xs opacity-70">Nâng cấp phân tích</div>
-                </div>
-                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                  Mới
-                </Badge>
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
               <Button
                 variant={activeSection === "risk" ? "default" : "outline"}
@@ -555,8 +428,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
           </CardContent>
         </Card>
 
-        {/* ===== TIMELINE UPGRADE SECTION ===== */}
-        {activeSection === "timeline" && timelineUpgradeAnalysis && (
+
           <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50">
             <CardHeader>
               <div className="flex items-center justify-between">

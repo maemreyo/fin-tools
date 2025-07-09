@@ -1,7 +1,7 @@
+// src/app/page.tsx
 "use client";
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import dynamic from "next/dynamic";
 import {
   Card,
   CardContent,
@@ -12,50 +12,30 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Calculator,
   Calendar,
   Home,
-  Building,
-  MapPin,
   TrendingUp,
-  Download,
-  History,
   BookOpen,
   Sparkles,
-  ArrowRight,
   CheckCircle,
   BarChart3,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  Plus,
-  Brain,
-  Zap,
-  Lightbulb,
-  Settings,
   Eye,
-  ChevronRight,
   Rocket,
   Target,
-  Clock,
-  Shield,
 } from "lucide-react";
 
 import PropertyInputForm from "@/components/PropertyInputForm";
-// ✅ UPDATED: Use modal instead of inline results
-import CalculationResultsModal from "@/components/CalculationResultsModal";
+import CalculationResults from "@/components/CalculationResults";
 import ScenarioComparison from "@/components/ScenarioComparison";
 import { AIAdvisorySystem } from "@/components/AIAdvisorySystem";
 import {
@@ -63,148 +43,121 @@ import {
   CalculationResult,
   PresetScenario,
 } from "@/types/real-estate";
-import { TimelineScenario } from "@/types/timeline";
-// ✅ UPDATED: Use fixed calculator
 import { calculateRealEstateInvestment } from "@/lib/real-estate-calculator";
 
-// ===== LAZY LOAD TIMELINE COMPONENTS =====
-const TimelineDashboard = dynamic(
-  () =>
-    import("@/components/timeline/TimelineDashboard").then((mod) => ({
-      default: mod.TimelineDashboard,
-    })),
-  {
-    loading: () => (
-      <Card className="h-96">
-        <CardContent className="flex items-center justify-center h-full">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-            <p className="text-muted-foreground">Đang tải Timeline Mode...</p>
-          </div>
-        </CardContent>
-      </Card>
-    ),
-    ssr: false,
-  }
-);
-
-// ===== ENHANCED PRESET SCENARIOS =====
+// ===== PRESET SCENARIOS =====
 const PRESET_SCENARIOS: PresetScenario[] = [
   {
     id: "studio-gialam-cautious",
     name: "Studio Gia Lâm (Kịch bản Thận trọng)",
     description:
-      "Kịch bản thận trọng cho căn Studio tại Masterise Lakeside, dựa trên các giả định lãi suất cao và tiền thuê thấp.",
-    category: "chung-cu",
-    location: "hanoi",
+      "Kịch bản thận trọng cho căn Studio tại Masterise Lakeside, dựa trên các giả định lãi suất cao và tiền thuê thấp mà chúng ta đã thảo luận.",
     inputs: {
-      giaTriBDS: 2397000000,
-      vonTuCo: 719100000,
-      chiPhiTrangBi: 100000000,
-      tienThueThang: 6000000,
-      laiSuatUuDai: 8,
-      thoiGianUuDai: 12,
-      laiSuatThaNoi: 10,
-      thoiGianVay: 35,
-      phiQuanLy: 480000,
-      tyLeLapDay: 95,
-      thueSuatChoThue: 10,
-      thuNhapKhac: 50000000,
-      chiPhiSinhHoat: 15000000,
-    },
-  },
-  {
-    id: "chung-cu-hcm-optimistic",
-    name: "Chung Cư HCM (Kịch bản Lạc quan)",
-    description: "Đầu tư chung cư tại TP.HCM với kỳ vọng tăng trưởng tốt",
-    category: "chung-cu",
-    location: "hcm",
-    inputs: {
-      giaTriBDS: 3500000000,
-      vonTuCo: 1050000000,
-      chiPhiTrangBi: 150000000,
-      tienThueThang: 12000000,
-      laiSuatUuDai: 7.5,
+      giaTriBDS: 1650000000,
+      vonTuCo: 500000000,
+      tienThueThang: 7000000,
+      laiSuatUuDai: 8.5,
+      laiSuatThaNoi: 11.5,
+      thoiGianVay: 20,
       thoiGianUuDai: 24,
-      laiSuatThaNoi: 9.5,
-      thoiGianVay: 30,
-      phiQuanLy: 600000,
-      tyLeLapDay: 98,
-      thueSuatChoThue: 10,
-      thuNhapKhac: 80000000,
-      chiPhiSinhHoat: 25000000,
-    },
-  },
-  {
-    id: "nha-pho-danang",
-    name: "Nhà Phố Đà Nẵng",
-    description: "Đầu tư nhà phố tại Đà Nẵng, phù hợp gia đình có con nhỏ",
-    category: "nha-pho",
-    location: "danang",
-    inputs: {
-      giaTriBDS: 7800000000,
-      vonTuCo: 2500000000,
-      chiPhiTrangBi: 150000000,
-      tienThueThang: 25000000,
-      laiSuatUuDai: 7.2,
-      thoiGianUuDai: 24,
-      laiSuatThaNoi: 9.2,
-      thoiGianVay: 25,
+      tyLeLapDay: 85,
       phiQuanLy: 200000,
-      tyLeLapDay: 90,
       phiBaoTri: 1.2,
+      baoHiemTaiSan: 0.15,
       thueSuatChoThue: 10,
-      thuNhapKhac: 50000000,
-      chiPhiSinhHoat: 15000000,
+      chiPhiTrangBi: 50000000,
+      chiPhiGiaoDich: 33000000,
     },
+    category: "studio",
+    riskLevel: "conservative",
+    marketCondition: "stable",
+    tags: ["Thận trọng", "Lãi suất cao", "Dòng tiền ổn định"],
+  },
+  {
+    id: "studio-gialam-optimistic",
+    name: "Studio Gia Lâm (Kịch bản Lạc quan)",
+    description:
+      "Kịch bản lạc quan với lãi suất ưu đãi tốt hơn và tiền thuê cao hơn, phù hợp cho thị trường phát triển.",
+    inputs: {
+      giaTriBDS: 1650000000,
+      vonTuCo: 500000000,
+      tienThueThang: 8500000,
+      laiSuatUuDai: 7.5,
+      laiSuatThaNoi: 9.5,
+      thoiGianVay: 20,
+      thoiGianUuDai: 36,
+      tyLeLapDay: 90,
+      phiQuanLy: 150000,
+      phiBaoTri: 1.0,
+      baoHiemTaiSan: 0.12,
+      thueSuatChoThue: 8,
+      chiPhiTrangBi: 45000000,
+      chiPhiGiaoDich: 28000000,
+    },
+    category: "studio",
+    riskLevel: "moderate",
+    marketCondition: "growth",
+    tags: ["Lạc quan", "Lãi suất tốt", "Dòng tiền cao"],
+  },
+  {
+    id: "apartment-2br-typical",
+    name: "Căn hộ 2PN (Kịch bản Điển hình)",
+    description:
+      "Kịch bản điển hình cho căn hộ 2 phòng ngủ, phù hợp cho gia đình trẻ hoặc đầu tư cho thuê.",
+    inputs: {
+      giaTriBDS: 3200000000,
+      vonTuCo: 1000000000,
+      tienThueThang: 15000000,
+      laiSuatUuDai: 8.0,
+      laiSuatThaNoi: 10.5,
+      thoiGianVay: 20,
+      thoiGianUuDai: 24,
+      tyLeLapDay: 80,
+      phiQuanLy: 400000,
+      phiBaoTri: 1.5,
+      baoHiemTaiSan: 0.18,
+      thueSuatChoThue: 10,
+      chiPhiTrangBi: 80000000,
+      chiPhiGiaoDich: 64000000,
+    },
+    category: "apartment",
+    riskLevel: "moderate",
+    marketCondition: "stable",
+    tags: ["2 phòng ngủ", "Gia đình", "Đầu tư"],
   },
 ];
 
-// ===== INTERFACE TYPES =====
-type CalculatorMode = "CLASSIC" | "TIMELINE";
-type ViewState = "INPUT" | "RESULTS" | "TIMELINE";
+// ===== MAIN APP COMPONENT =====
 
 interface AppState {
-  mode: CalculatorMode;
-  viewState: ViewState;
+  viewState: "INPUT" | "RESULTS" | "COMPARISON";
   currentInputs: RealEstateInputs | null;
   currentResult: CalculationResult | null;
-  selectedPreset: PresetScenario | null;
   calculationHistory: CalculationResult[];
-  timelineScenarios: TimelineScenario[];
   isCalculating: boolean;
-  hasTimelineAccess: boolean;
-  // ✅ NEW: Modal state
-  showResultsModal: boolean;
+  selectedPreset: PresetScenario | null;
 }
 
-// ===== MAIN COMPONENT =====
-export default function EnhancedRealEstateCalculatorPage() {
+export default function RealEstateCalculatorApp() {
   // ===== STATE MANAGEMENT =====
   const [appState, setAppState] = useState<AppState>({
-    mode: "CLASSIC",
     viewState: "INPUT",
     currentInputs: null,
     currentResult: null,
-    selectedPreset: null,
     calculationHistory: [],
-    timelineScenarios: [],
     isCalculating: false,
-    hasTimelineAccess: true,
-    showResultsModal: false, // ✅ NEW
+    selectedPreset: null,
   });
 
   // UI State
-  const [showPresets, setShowPresets] = useState(true);
-  const [showComparison, setShowComparison] = useState(false);
   const [showCalculationConfirm, setShowCalculationConfirm] = useState(false);
   const [pendingCalculation, setPendingCalculation] =
     useState<RealEstateInputs | null>(null);
+  const [showPresetDialog, setShowPresetDialog] = useState(false);
 
-  // ===== LOAD SAVED DATA =====
+  // ===== LIFECYCLE HOOKS =====
   useEffect(() => {
     const savedHistory = localStorage.getItem("calculation-history");
-    const savedScenarios = localStorage.getItem("timeline-scenarios");
 
     if (savedHistory) {
       try {
@@ -212,15 +165,6 @@ export default function EnhancedRealEstateCalculatorPage() {
         setAppState((prev) => ({ ...prev, calculationHistory: history }));
       } catch (error) {
         console.error("Failed to load calculation history:", error);
-      }
-    }
-
-    if (savedScenarios) {
-      try {
-        const scenarios = JSON.parse(savedScenarios);
-        setAppState((prev) => ({ ...prev, timelineScenarios: scenarios }));
-      } catch (error) {
-        console.error("Failed to load timeline scenarios:", error);
       }
     }
   }, []);
@@ -231,13 +175,11 @@ export default function EnhancedRealEstateCalculatorPage() {
     setShowCalculationConfirm(true);
   }, []);
 
-  // ✅ UPDATED: Enhanced calculation handler with modal
   const handleCalculate = useCallback(
     async (inputs: RealEstateInputs) => {
       setAppState((prev) => ({ ...prev, isCalculating: true }));
 
       try {
-        // ✅ Use fixed calculator that eliminates null/NaN
         const result = calculateRealEstateInvestment(inputs);
 
         // Enhanced result with metadata
@@ -254,11 +196,10 @@ export default function EnhancedRealEstateCalculatorPage() {
           currentResult: enhancedResult,
           viewState: "RESULTS",
           isCalculating: false,
-          showResultsModal: true, // ✅ NEW: Show modal instead of inline
           calculationHistory: [
             enhancedResult,
             ...prev.calculationHistory.slice(0, 9),
-          ],
+          ], // Keep last 10
         }));
 
         // Save to localStorage
@@ -268,471 +209,221 @@ export default function EnhancedRealEstateCalculatorPage() {
         ];
         localStorage.setItem("calculation-history", JSON.stringify(newHistory));
 
-        toast.success("Tính toán thành công! 🎉", {
-          description: "Kết quả đã sẵn sàng để xem.",
+        toast.success("Tính toán thành công!", {
+          description: "Kết quả đã được cập nhật và lưu vào lịch sử",
+          duration: 3000,
         });
       } catch (error) {
         console.error("Calculation error:", error);
         setAppState((prev) => ({ ...prev, isCalculating: false }));
-
-        // ✅ IMPROVED: Better error handling
         toast.error("Lỗi tính toán", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "Vui lòng kiểm tra lại dữ liệu đầu vào.",
+          description: "Vui lòng kiểm tra lại dữ liệu đầu vào",
+          duration: 4000,
         });
       }
     },
     [appState.calculationHistory]
   );
 
-  // ✅ NEW: Modal handlers
-  const handleCloseResultsModal = useCallback(() => {
-    setAppState((prev) => ({ ...prev, showResultsModal: false }));
-  }, []);
 
-  const handleNewCalculation = useCallback(() => {
-    setAppState((prev) => ({
-      ...prev,
-      showResultsModal: false,
-      viewState: "INPUT",
-      currentResult: null,
-    }));
-  }, []);
 
-  const handleUpgradeToTimeline = useCallback(() => {
-    if (appState.currentResult) {
+  // ===== PRESET HANDLERS =====
+  const handlePresetSelect = useCallback(
+    (preset: PresetScenario) => {
       setAppState((prev) => ({
         ...prev,
-        mode: "TIMELINE",
-        viewState: "TIMELINE",
-        showResultsModal: false,
+        selectedPreset: preset,
+        viewState: "INPUT",
       }));
-      toast.success("Chuyển sang Timeline Mode! 🚀");
-    }
-  }, [appState.currentResult]);
 
-  // Timeline mode handlers
-  const handleSwitchToTimeline = useCallback(() => {
-    setAppState((prev) => ({
-      ...prev,
-      mode: "TIMELINE",
-      viewState: "TIMELINE",
-    }));
-  }, []);
+      setShowPresetDialog(false);
 
-  const handleSwitchToClassic = useCallback(() => {
-    setAppState((prev) => ({ ...prev, mode: "CLASSIC", viewState: "INPUT" }));
-  }, []);
+      toast.success("Đã áp dụng kịch bản mẫu", {
+        description: `${preset.name} - Dữ liệu đã được điền vào form`,
+        action: {
+          label: "Tính toán ngay",
+          onClick: () => {
+            // Auto-calculate if user wants
+            if (preset.inputs) {
+              handleCalculate(preset.inputs as RealEstateInputs);
+            }
+          },
+        },
+        duration: 5000,
+      });
 
-  // Preset handlers
-  const handlePresetSelect = useCallback((preset: PresetScenario) => {
-    setAppState((prev) => ({ ...prev, selectedPreset: preset }));
-    toast.success(`Đã tải template "${preset.name}"`);
-  }, []);
+      // Smooth scroll to form
+      setTimeout(() => {
+        const formElement = document.querySelector(
+          '[data-form="property-input"]'
+        );
+        if (formElement) {
+          formElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+            inline: "nearest",
+          });
+        }
+      }, 100);
+    },
+    [handleCalculate]
+  );
 
-  // Confirm calculation handler
-  const handleConfirmCalculation = useCallback(() => {
-    if (pendingCalculation) {
-      handleCalculate(pendingCalculation);
-      setPendingCalculation(null);
-      setShowCalculationConfirm(false);
-    }
-  }, [pendingCalculation, handleCalculate]);
 
-  // ===== COMPUTED VALUES =====
-  const hasCalculationHistory = appState.calculationHistory.length > 0;
-  const currentCalculation = appState.currentResult;
 
-  // ===== RENDER =====
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <div className="container mx-auto py-8 space-y-8 max-w-7xl">
-        {/* ===== HEADER SECTION ===== */}
-        <Card className="bg-gradient-to-r from-blue-600 to-green-600 text-white border-0">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Home className="h-8 w-8" />
-              <CardTitle className="text-3xl font-bold">
-                Real Estate Calculator Pro
-              </CardTitle>
-            </div>
-            <CardDescription className="text-blue-100 text-lg">
-              Phân tích đầu tư bất động sản chuyên nghiệp với AI hỗ trợ
+  // ===== RENDER METHODS =====
+  const renderHeader = () => (
+    <div className="text-center space-y-4 mb-8">
+      <div className="flex items-center justify-center gap-3">
+        <div className="p-3 bg-blue-100 rounded-full">
+          <Home className="h-8 w-8 text-blue-600" />
+        </div>
+        <h1 className="text-4xl font-bold text-gray-900">
+          Real Estate Calculator
+        </h1>
+      </div>
+      <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        Công cụ tính toán đầu tư bất động sản thông minh với phân tích chi tiết
+      </p>
+    </div>
+  );
+
+  const renderPresetScenarios = () => (
+    <Card className="mb-6">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-yellow-500" />
+              Kịch bản mẫu
+            </CardTitle>
+            <CardDescription>
+              Các kịch bản đã được tính toán sẵn để bạn tham khảo
             </CardDescription>
-
-            {/* Mode Selector */}
-            <div className="flex justify-center mt-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1">
-                <div className="flex gap-1">
-                  <Button
-                    variant={
-                      appState.mode === "CLASSIC" ? "secondary" : "ghost"
-                    }
-                    onClick={handleSwitchToClassic}
-                    className={`${
-                      appState.mode === "CLASSIC"
-                        ? "bg-white text-blue-600"
-                        : "text-white hover:bg-white/20"
-                    }`}
-                  >
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Classic Mode
-                  </Button>
-                  <Button
-                    variant={
-                      appState.mode === "TIMELINE" ? "secondary" : "ghost"
-                    }
-                    onClick={handleSwitchToTimeline}
-                    className={`${
-                      appState.mode === "TIMELINE"
-                        ? "bg-white text-green-600"
-                        : "text-white hover:bg-white/20"
-                    } relative`}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Timeline Mode
-                    <Badge className="ml-2 bg-yellow-400 text-yellow-900 text-xs">
-                      Pro
-                    </Badge>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* ===== CLASSIC MODE ===== */}
-        {appState.mode === "CLASSIC" && (
-          <div className="space-y-8">
-            {/* ===== PRESET SCENARIOS SECTION ===== */}
-            {showPresets && (
-              <Card>
-                <CardHeader>
+          </div>
+          <Button variant="outline" onClick={() => setShowPresetDialog(true)}>
+            <Eye className="h-4 w-4 mr-2" />
+            Xem tất cả
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {PRESET_SCENARIOS.map((preset) => (
+            <Card
+              key={preset.id}
+              className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-blue-200"
+              onClick={() => handlePresetSelect(preset)}
+            >
+              <CardContent className="p-4">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" />
-                        Templates Sẵn Có
-                      </CardTitle>
-                      <CardDescription>
-                        Chọn template phù hợp để bắt đầu nhanh
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPresets(false)}
-                    >
-                      Ẩn
-                    </Button>
+                    <h4 className="font-semibold text-sm">{preset.name}</h4>
+                    <Badge variant="secondary" className="text-xs">
+                      {preset.category}
+                    </Badge>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {PRESET_SCENARIOS.map((preset) => (
-                      <Card
-                        key={preset.id}
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          appState.selectedPreset?.id === preset.id
-                            ? "border-blue-500 bg-blue-50"
-                            : ""
-                        }`}
-                        onClick={() => handlePresetSelect(preset)}
-                      >
-                        <CardContent className="pt-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between">
-                              <h4 className="font-semibold text-sm">
-                                {preset.name}
-                              </h4>
-                              <div className="flex gap-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {preset.category}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {preset.location}
-                                </Badge>
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {preset.description}
-                            </p>
-                            <div className="text-xs space-y-1">
-                              <div className="flex justify-between">
-                                <span>Giá trị:</span>
-                                <span className="font-medium">
-                                  {preset.inputs.giaTriBDS
-                                    ? `${(
-                                        preset.inputs.giaTriBDS / 1000000000
-                                      ).toFixed(1)}B`
-                                    : "N/A"}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Thuê/tháng:</span>
-                                <span className="font-medium">
-                                  {preset.inputs.tienThueThang
-                                    ? `${(
-                                        preset.inputs.tienThueThang / 1000000
-                                      ).toFixed(0)}M`
-                                    : "N/A"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                  <p className="text-xs text-gray-600 line-clamp-2">
+                    {preset.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {preset.tags?.slice(0, 2).map((tag, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ===== MAIN CALCULATION FORM ===== */}
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-              {/* Main Form - Takes up more space */}
-              <div className="xl:col-span-3">
-                <PropertyInputForm
-                  onCalculate={handleCalculateWithConfirm}
-                  isLoading={appState.isCalculating}
-                  showTimelineToggle={false}
-                  selectedPreset={appState.selectedPreset}
-                />
-              </div>
-
-              {/* Compact Sidebar */}
-              <div className="xl:col-span-1 space-y-4">
-                {/* Quick Actions */}
-                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-blue-600" />
-                      Thao Tác Nhanh
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-xs"
-                      onClick={() => setShowComparison(hasCalculationHistory)}
-                      disabled={!hasCalculationHistory}
-                    >
-                      <BarChart3 className="h-3 w-3 mr-2" />
-                      So sánh kịch bản
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start text-xs"
-                      onClick={handleSwitchToTimeline}
-                    >
-                      <Calendar className="h-3 w-3 mr-2" />
-                      Timeline Mode
-                      <Badge className="ml-auto bg-purple-100 text-purple-700 text-xs">
-                        Pro
-                      </Badge>
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Calculation History - Compact */}
-                {hasCalculationHistory && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <History className="h-4 w-4 text-green-600" />
-                        Lịch Sử
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {appState.calculationHistory
-                          .slice(0, 3)
-                          .map((calc, index) => (
-                            <div
-                              key={calc.calculationId || index}
-                              className="p-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md cursor-pointer hover:from-blue-50 hover:to-blue-100 transition-all duration-200 border border-gray-200 hover:border-blue-300"
-                              onClick={() => {
-                                setAppState((prev) => ({
-                                  ...prev,
-                                  currentResult: calc,
-                                  showResultsModal: true,
-                                }));
-                              }}
-                            >
-                              <div className="flex justify-between items-center">
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-semibold text-gray-900 truncate">
-                                    {calc.inputs.giaTriBDS
-                                      ? `${(
-                                          calc.inputs.giaTriBDS / 1000000000
-                                        ).toFixed(1)}B`
-                                      : "N/A"}
-                                  </div>
-                                  <div className="text-xs text-gray-500 truncate">
-                                    {calc.calculatedAt
-                                      ? new Date(
-                                          calc.calculatedAt
-                                        ).toLocaleDateString("vi-VN", {
-                                          month: "short",
-                                          day: "numeric",
-                                        })
-                                      : "N/A"}
-                                  </div>
-                                </div>
-                                <Badge
-                                  variant={
-                                    (calc.steps?.dongTienRongBDS || 0) > 0
-                                      ? "default"
-                                      : "destructive"
-                                  }
-                                  className="text-xs ml-2 shrink-0"
-                                >
-                                  {(calc.roiHangNam || 0).toFixed(1)}%
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Feature Highlights - Compact */}
-                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-emerald-600" />
-                      Tính Năng
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />
-                        <span className="text-emerald-800">ROI chính xác</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />
-                        <span className="text-emerald-800">
-                          Dòng tiền chi tiết
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-3 w-3 text-blue-600 shrink-0" />
-                        <span className="text-blue-800">Cảnh báo rủi ro</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-3 w-3 text-purple-600 shrink-0" />
-                        <span className="text-purple-800">AI Advisory</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Stats */}
-                {currentCalculation && (
-                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Target className="h-4 w-4 text-blue-600" />
-                        Tóm Tắt
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-center">
-                        <div className="text-xs text-blue-600 mb-1">
-                          Dòng tiền/tháng
-                        </div>
-                        <div
-                          className={`text-lg font-bold ${
-                            (currentCalculation.steps?.dongTienRongBDS || 0) > 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {(
-                            (currentCalculation.steps?.dongTienRongBDS || 0) /
-                            1000000
-                          ).toFixed(1)}
-                          M
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-xs text-blue-600 mb-1">
-                          ROI năm
-                        </div>
-                        <div
-                          className={`text-lg font-bold ${
-                            (currentCalculation.roiHangNam || 0) > 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {(currentCalculation.roiHangNam || 0).toFixed(1)}%
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
-            {/* AI Advisory - Compact */}
-            {/* {currentCalculation && (
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Brain className="h-4 w-4 text-purple-600" />
-                    AI Advisor
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AIAdvisorySystem
-                    result={currentCalculation}
-                    onTimelineUpgrade={handleUpgradeToTimeline}
-                  />
-                </CardContent>
-              </Card>
-            )} */}
-          </div>
-        )}
-
-        {/* ===== TIMELINE MODE ===== */}
-        {appState.mode === "TIMELINE" && (
-          <div className="space-y-8">
-            <Card className="border-purple-200 bg-purple-50">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-6 w-6 text-purple-600" />
-                  <div>
-                    <CardTitle className="text-purple-800">
-                      Timeline Mode - Phân tích 240 tháng
-                    </CardTitle>
-                    <CardDescription className="text-purple-600">
-                      Mô phỏng chi tiết với events và scenarios
-                    </CardDescription>
-                  </div>
                 </div>
-              </CardHeader>
+              </CardContent>
             </Card>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-            <TimelineDashboard />
-          </div>
-        )}
+  // ===== MAIN RENDER =====
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        {renderHeader()}
+        {renderPresetScenarios()}
 
-        {/* ===== MODALS ===== */}
+        {/* Main Content */}
+        <div className="space-y-6">
+          <Tabs
+            value={appState.viewState}
+            onValueChange={(value) =>
+              setAppState((prev) => ({
+                ...prev,
+                viewState: value as "INPUT" | "RESULTS" | "COMPARISON",
+              }))
+            }
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="INPUT">
+                <Calculator className="h-4 w-4 mr-2" />
+                Nhập liệu
+              </TabsTrigger>
+              <TabsTrigger value="RESULTS" disabled={!appState.currentResult}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Kết quả
+              </TabsTrigger>
+              <TabsTrigger
+                value="COMPARISON"
+                disabled={appState.calculationHistory.length < 2}
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                So sánh
+              </TabsTrigger>
+            </TabsList>
 
-        {/* ✅ NEW: Results Modal */}
-        <CalculationResultsModal
-          result={appState.currentResult}
-          isOpen={appState.showResultsModal}
-          onClose={handleCloseResultsModal}
-          onNewCalculation={handleNewCalculation}
-          onUpgradeToTimeline={handleUpgradeToTimeline}
-        />
+            <TabsContent value="INPUT" className="space-y-6">
+              <PropertyInputForm
+                onCalculate={handleCalculate}
+                isCalculating={appState.isCalculating}
+                presetData={appState.selectedPreset?.inputs}
+              />
+            </TabsContent>
+
+            <TabsContent value="RESULTS" className="space-y-6">
+              {appState.currentResult && (
+                <>
+                  <CalculationResults
+                    result={appState.currentResult}
+                    inputs={appState.currentInputs!}
+                  />
+                  <AIAdvisorySystem
+                    result={appState.currentResult}
+                    onTimelineUpgrade={() => {
+                      if (appState.currentInputs) {
+                        handleTimelineActivate({
+                          ...appState.currentInputs,
+                          enableTimeline: true,
+                          timelineStartDate: new Date(),
+                        });
+                      }
+                    }}
+                  />
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="COMPARISON" className="space-y-6">
+              <ScenarioComparison
+                scenarios={appState.calculationHistory}
+                onScenarioSelect={(scenario) => {
+                  setAppState((prev) => ({
+                    ...prev,
+                    currentResult: scenario,
+                    currentInputs: scenario.inputs,
+                    viewState: "RESULTS",
+                  }));
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {/* Calculation Confirmation Dialog */}
         <Dialog
@@ -743,42 +434,80 @@ export default function EnhancedRealEstateCalculatorPage() {
             <DialogHeader>
               <DialogTitle>Xác nhận tính toán</DialogTitle>
               <DialogDescription>
-                Bạn có chắc chắn muốn thực hiện tính toán với dữ liệu hiện tại?
+                Bạn có chắc chắn muốn tính toán với dữ liệu này không?
               </DialogDescription>
             </DialogHeader>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowCalculationConfirm(false)}
               >
                 Hủy
               </Button>
-              <Button onClick={handleConfirmCalculation}>
-                {appState.isCalculating && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Xác nhận
+              <Button
+                onClick={() => {
+                  if (pendingCalculation) {
+                    handleCalculate(pendingCalculation);
+                    setShowCalculationConfirm(false);
+                    setPendingCalculation(null);
+                  }
+                }}
+              >
+                Tính toán
               </Button>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Scenario Comparison Modal */}
-        {showComparison && (
-          <Dialog open={showComparison} onOpenChange={setShowComparison}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-              <DialogHeader>
-                <DialogTitle>So sánh kịch bản</DialogTitle>
-                <DialogDescription>
-                  Phân tích và so sánh các kịch bản đầu tư
-                </DialogDescription>
-              </DialogHeader>
-              <div className="overflow-auto">
-                <ScenarioComparison scenarios={appState.calculationHistory} />
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+        {/* Preset Dialog */}
+        <Dialog open={showPresetDialog} onOpenChange={setShowPresetDialog}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Kịch bản mẫu</DialogTitle>
+              <DialogDescription>
+                Chọn kịch bản phù hợp để bắt đầu tính toán
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+              {PRESET_SCENARIOS.map((preset) => (
+                <Card
+                  key={preset.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handlePresetSelect(preset)}
+                >
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">{preset.name}</h4>
+                        <Badge variant="secondary">{preset.category}</Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {preset.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {preset.tags?.map((tag, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Giá trị BĐS:</span>
+                        <span className="font-medium">
+                          {preset.inputs?.giaTriBDS
+                            ? `${(preset.inputs.giaTriBDS / 1000000).toFixed(
+                                0
+                              )}M`
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
