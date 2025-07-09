@@ -108,6 +108,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
       phiQuanLy: 480000,
       tyLeLapDay: 95,
       thueSuatChoThue: 10,
+      thuNhapKhac: 50000000,
+      chiPhiSinhHoat: 15000000,
     },
   },
   {
@@ -130,6 +132,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
       phiQuanLy: 716800,
       tyLeLapDay: 95,
       thueSuatChoThue: 10,
+      thuNhapKhac: 50000000,
+      chiPhiSinhHoat: 15000000,
     },
   },
   {
@@ -152,6 +156,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
       phiQuanLy: 1200000,
       tyLeLapDay: 95,
       thueSuatChoThue: 10,
+      thuNhapKhac: 50000000,
+      chiPhiSinhHoat: 15000000,
     },
   },
   {
@@ -173,6 +179,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
       tyLeLapDay: 95,
       phiBaoTri: 1,
       thueSuatChoThue: 10,
+      thuNhapKhac: 50000000,
+      chiPhiSinhHoat: 15000000,
     },
   },
   {
@@ -195,6 +203,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
       tyLeLapDay: 98,
       phiBaoTri: 0.8,
       thueSuatChoThue: 10,
+      thuNhapKhac: 50000000,
+      chiPhiSinhHoat: 15000000,
     },
   },
   {
@@ -217,6 +227,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
       tyLeLapDay: 90,
       phiBaoTri: 1.2,
       thueSuatChoThue: 10,
+      thuNhapKhac: 50000000,
+      chiPhiSinhHoat: 15000000,
     },
   },
 ];
