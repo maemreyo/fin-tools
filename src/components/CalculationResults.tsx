@@ -1,30 +1,36 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
   PieChart,
   Pie,
   Cell,
-} from 'recharts';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
+} from "recharts";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
   PieChart as PieChartIcon,
   BarChart3,
   Download,
@@ -40,11 +46,11 @@ import {
   Zap,
   Eye,
   RefreshCw,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { CalculationResult } from '@/types/real-estate';
-import { formatVND, formatPercent } from '@/lib/financial-utils';
-import AIAdvisorySystem from './AIAdvisorySystem';
+import { CalculationResult } from "@/types/real-estate";
+import { formatVND, formatPercent } from "@/lib/financial-utils";
+import { AIAdvisorySystem } from "./AIAdvisorySystem";
 
 interface CalculationResultsProps {
   result: CalculationResult;
@@ -54,37 +60,55 @@ interface CalculationResultsProps {
 
 // Color scheme cho charts
 const CHART_COLORS = {
-  positive: '#22c55e',
-  negative: '#ef4444',
-  neutral: '#6b7280',
-  primary: '#3b82f6',
-  secondary: '#8b5cf6',
-  warning: '#f59e0b'
+  positive: "#22c55e",
+  negative: "#ef4444",
+  neutral: "#6b7280",
+  primary: "#3b82f6",
+  secondary: "#8b5cf6",
+  warning: "#f59e0b",
 };
 
-const PIE_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const PIE_COLORS = [
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+];
 
-export default function CalculationResults({ result, onExport, onNewCalculation }: CalculationResultsProps) {
+export default function CalculationResults({
+  result,
+  onExport,
+  onNewCalculation,
+}: CalculationResultsProps) {
   const { inputs, steps, warnings, suggestions } = result;
   const [activeTab, setActiveTab] = React.useState("overview");
 
   // Quick summary metrics
   const summaryMetrics = React.useMemo(() => {
     const isPositiveCashFlow = steps.dongTienRongBDS > 0;
-    const roiLevel = result.roiHangNam > 15 ? "Xuất sắc" : 
-                   result.roiHangNam > 10 ? "Tốt" :
-                   result.roiHangNam > 5 ? "Trung bình" : "Thấp";
-    const riskLevel = inputs.tyLeVay > 80 ? "Cao" : 
-                     inputs.tyLeVay > 70 ? "Trung bình" : "Thấp";
-    
+    const roiLevel =
+      result.roiHangNam > 15
+        ? "Xuất sắc"
+        : result.roiHangNam > 10
+        ? "Tốt"
+        : result.roiHangNam > 5
+        ? "Trung bình"
+        : "Thấp";
+    const riskLevel =
+      inputs.tyLeVay > 80 ? "Cao" : inputs.tyLeVay > 70 ? "Trung bình" : "Thấp";
+
     return {
       isPositiveCashFlow,
       roiLevel,
       riskLevel,
       monthlyImpact: steps.dongTienRongBDS,
       yearlyReturn: steps.dongTienRongBDS * 12,
-      paybackMonths: steps.tongVonBanDau > 0 && steps.dongTienRongBDS > 0 ? 
-        Math.ceil(steps.tongVonBanDau / steps.dongTienRongBDS) : -1
+      paybackMonths:
+        steps.tongVonBanDau > 0 && steps.dongTienRongBDS > 0
+          ? Math.ceil(steps.tongVonBanDau / steps.dongTienRongBDS)
+          : -1,
     };
   }, [steps, inputs, result]);
 
@@ -92,31 +116,34 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
   const cashFlowOverTime = React.useMemo(() => {
     const months = 60; // 5 năm
     const data = [];
-    
+
     for (let month = 1; month <= months; month++) {
       const year = Math.ceil(month / 12);
       const isPreferentialPeriod = month <= inputs.thoiGianUuDai;
-      
+
       // Simplified projection - trong thực tế sẽ phức tạp hơn
       let currentCashFlow = steps.dongTienRongBDS;
-      
+
       // Adjust for interest rate change after preferential period
       if (!isPreferentialPeriod) {
-        const rateDiff = (inputs.laiSuatThaNoi - inputs.laiSuatUuDai) / 100 / 12;
-        const additionalPayment = (inputs.giaTriBDS * inputs.tyLeVay / 100) * rateDiff;
+        const rateDiff =
+          (inputs.laiSuatThaNoi - inputs.laiSuatUuDai) / 100 / 12;
+        const additionalPayment =
+          ((inputs.giaTriBDS * inputs.tyLeVay) / 100) * rateDiff;
         currentCashFlow -= additionalPayment;
       }
-      
+
       data.push({
         month,
         year,
         cashFlow: currentCashFlow,
         cumulativeCashFlow: currentCashFlow * month - steps.tongVonBanDau,
         period: isPreferentialPeriod ? "Ưu đãi" : "Thả nổi",
-        netWorth: (currentCashFlow * month - steps.tongVonBanDau) + inputs.giaTriBDS,
+        netWorth:
+          currentCashFlow * month - steps.tongVonBanDau + inputs.giaTriBDS,
       });
     }
-    
+
     return data;
   }, [inputs, steps]);
 
@@ -127,14 +154,14 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
     const phiBaoTri = steps.chiPhiBaoTriThang || 0;
     const baoHiem = steps.baoHiemTaiSanThang || 0;
     const thue = steps.thueChoThue_Thang || 0;
-    
+
     return [
-      { name: 'Trả ngân hàng', value: tienTraNH, color: CHART_COLORS.negative },
-      { name: 'Phí quản lý', value: phiQuanLy, color: CHART_COLORS.warning },
-      { name: 'Bảo trì', value: phiBaoTri, color: CHART_COLORS.secondary },
-      { name: 'Bảo hiểm', value: baoHiem, color: CHART_COLORS.neutral },
-      { name: 'Thuế', value: thue, color: CHART_COLORS.primary },
-    ].filter(item => item.value > 0);
+      { name: "Trả ngân hàng", value: tienTraNH, color: CHART_COLORS.negative },
+      { name: "Phí quản lý", value: phiQuanLy, color: CHART_COLORS.warning },
+      { name: "Bảo trì", value: phiBaoTri, color: CHART_COLORS.secondary },
+      { name: "Bảo hiểm", value: baoHiem, color: CHART_COLORS.neutral },
+      { name: "Thuế", value: thue, color: CHART_COLORS.primary },
+    ].filter((item) => item.value > 0);
   }, [inputs, steps]);
 
   return (
@@ -174,14 +201,23 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
             <Card className="bg-white border-2">
               <CardContent className="pt-4">
                 <div className="text-center">
-                  <div className="text-sm text-muted-foreground mb-1">Dòng tiền/tháng</div>
-                  <div className={`text-2xl font-bold ${
-                    summaryMetrics.isPositiveCashFlow ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    Dòng tiền/tháng
+                  </div>
+                  <div
+                    className={`text-2xl font-bold ${
+                      summaryMetrics.isPositiveCashFlow
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
                     {formatVND(summaryMetrics.monthlyImpact)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {summaryMetrics.isPositiveCashFlow ? 'Thu thêm' : 'Chi thêm'} hàng tháng
+                    {summaryMetrics.isPositiveCashFlow
+                      ? "Thu thêm"
+                      : "Chi thêm"}{" "}
+                    hàng tháng
                   </div>
                 </div>
               </CardContent>
@@ -190,16 +226,26 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
             <Card className="bg-white border-2">
               <CardContent className="pt-4">
                 <div className="text-center">
-                  <div className="text-sm text-muted-foreground mb-1">ROI năm</div>
-                  <div className={`text-2xl font-bold ${
-                    result.roiHangNam > 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    ROI năm
+                  </div>
+                  <div
+                    className={`text-2xl font-bold ${
+                      result.roiHangNam > 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
                     {result.roiHangNam.toFixed(1)}%
                   </div>
-                  <Badge variant={
-                    result.roiHangNam > 10 ? "default" : 
-                    result.roiHangNam > 5 ? "secondary" : "destructive"
-                  } className="text-xs">
+                  <Badge
+                    variant={
+                      result.roiHangNam > 10
+                        ? "default"
+                        : result.roiHangNam > 5
+                        ? "secondary"
+                        : "destructive"
+                    }
+                    className="text-xs"
+                  >
                     {summaryMetrics.roiLevel}
                   </Badge>
                 </div>
@@ -209,15 +255,20 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
             <Card className="bg-white border-2">
               <CardContent className="pt-4">
                 <div className="text-center">
-                  <div className="text-sm text-muted-foreground mb-1">Hoàn vốn</div>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    Hoàn vốn
+                  </div>
                   <div className="text-xl font-bold text-blue-600">
-                    {summaryMetrics.paybackMonths > 0 ? 
-                      `${Math.floor(summaryMetrics.paybackMonths / 12)}Y ${summaryMetrics.paybackMonths % 12}M` : 
-                      "∞"
-                    }
+                    {summaryMetrics.paybackMonths > 0
+                      ? `${Math.floor(summaryMetrics.paybackMonths / 12)}Y ${
+                          summaryMetrics.paybackMonths % 12
+                        }M`
+                      : "∞"}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {summaryMetrics.paybackMonths > 0 ? 'Thời gian hoàn vốn' : 'Không hoàn vốn'}
+                    {summaryMetrics.paybackMonths > 0
+                      ? "Thời gian hoàn vốn"
+                      : "Không hoàn vốn"}
                   </div>
                 </div>
               </CardContent>
@@ -226,7 +277,9 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
             <Card className="bg-white border-2">
               <CardContent className="pt-4">
                 <div className="text-center">
-                  <div className="text-sm text-muted-foreground mb-1">Mức rủi ro</div>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    Mức rủi ro
+                  </div>
                   <div className="text-xl font-bold text-orange-600">
                     {summaryMetrics.riskLevel}
                   </div>
@@ -240,21 +293,26 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
 
           {/* Quick Status Indicators */}
           <div className="flex flex-wrap gap-2">
-            <Badge 
-              variant={summaryMetrics.isPositiveCashFlow ? "default" : "destructive"}
+            <Badge
+              variant={
+                summaryMetrics.isPositiveCashFlow ? "default" : "destructive"
+              }
               className="flex items-center gap-1"
             >
-              {summaryMetrics.isPositiveCashFlow ? 
-                <CheckCircle className="h-3 w-3" /> : 
+              {summaryMetrics.isPositiveCashFlow ? (
+                <CheckCircle className="h-3 w-3" />
+              ) : (
                 <XCircle className="h-3 w-3" />
-              }
-              {summaryMetrics.isPositiveCashFlow ? 'Dòng tiền dương' : 'Dòng tiền âm'}
+              )}
+              {summaryMetrics.isPositiveCashFlow
+                ? "Dòng tiền dương"
+                : "Dòng tiền âm"}
             </Badge>
-            
+
             <Badge variant={result.rentalYield > 5 ? "default" : "secondary"}>
               Yield: {result.rentalYield?.toFixed(2)}%
             </Badge>
-            
+
             <Badge variant={inputs.tyLeVay <= 70 ? "default" : "destructive"}>
               LTV: {inputs.tyLeVay.toFixed(0)}%
             </Badge>
@@ -270,7 +328,11 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
       </Card>
 
       {/* ENHANCED Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Eye className="h-4 w-4" />
@@ -306,32 +368,50 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span>Giá trị bất động sản:</span>
-                    <span className="font-semibold">{formatVND(inputs.giaTriBDS)}</span>
+                    <span className="font-semibold">
+                      {formatVND(inputs.giaTriBDS)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Vốn tự có:</span>
-                    <span className="font-semibold text-green-600">{formatVND(steps.vonTuCo || 0)}</span>
+                    <span className="font-semibold text-green-600">
+                      {formatVND(steps.vonTuCo || 0)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Số tiền vay:</span>
-                    <span className="font-semibold text-orange-600">{formatVND(steps.soTienVay || 0)}</span>
+                    <span className="font-semibold text-orange-600">
+                      {formatVND(steps.soTienVay || 0)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tổng vốn ban đầu:</span>
-                    <span className="font-semibold text-blue-600">{formatVND(steps.tongVonBanDau)}</span>
+                    <span className="font-semibold text-blue-600">
+                      {formatVND(steps.tongVonBanDau)}
+                    </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between">
                     <span>Thu nhập thuê/tháng:</span>
-                    <span className="font-semibold text-green-600">{formatVND(steps.thuNhapThueHieuDung)}</span>
+                    <span className="font-semibold text-green-600">
+                      {formatVND(steps.thuNhapThueHieuDung)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Chi phí vận hành/tháng:</span>
-                    <span className="font-semibold text-red-600">{formatVND(steps.tongChiPhiVanHanh)}</span>
+                    <span className="font-semibold text-red-600">
+                      {formatVND(steps.tongChiPhiVanHanh)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-lg font-bold">
                     <span>Dòng tiền ròng/tháng:</span>
-                    <span className={summaryMetrics.isPositiveCashFlow ? 'text-green-600' : 'text-red-600'}>
+                    <span
+                      className={
+                        summaryMetrics.isPositiveCashFlow
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
                       {formatVND(steps.dongTienRongBDS)}
                     </span>
                   </div>
@@ -349,40 +429,48 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                   <div>
                     <div className="flex justify-between mb-1">
                       <span>ROI hàng năm:</span>
-                      <span className="font-semibold">{formatPercent(result.roiHangNam)}</span>
+                      <span className="font-semibold">
+                        {formatPercent(result.roiHangNam)}
+                      </span>
                     </div>
-                    <Progress 
-                      value={Math.max(0, Math.min(100, result.roiHangNam * 5))} 
-                      className="h-2" 
+                    <Progress
+                      value={Math.max(0, Math.min(100, result.roiHangNam * 5))}
+                      className="h-2"
                     />
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between mb-1">
                       <span>Rental Yield:</span>
-                      <span className="font-semibold">{formatPercent(result.rentalYield || 0)}</span>
+                      <span className="font-semibold">
+                        {formatPercent(result.rentalYield || 0)}
+                      </span>
                     </div>
-                    <Progress 
-                      value={Math.max(0, Math.min(100, (result.rentalYield || 0) * 10))} 
-                      className="h-2" 
+                    <Progress
+                      value={Math.max(
+                        0,
+                        Math.min(100, (result.rentalYield || 0) * 10)
+                      )}
+                      className="h-2"
                     />
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between mb-1">
                       <span>Tỷ lệ vay:</span>
-                      <span className="font-semibold">{formatPercent(inputs.tyLeVay)}</span>
+                      <span className="font-semibold">
+                        {formatPercent(inputs.tyLeVay)}
+                      </span>
                     </div>
-                    <Progress 
-                      value={inputs.tyLeVay} 
-                      className="h-2" 
-                    />
+                    <Progress value={inputs.tyLeVay} className="h-2" />
                   </div>
 
                   <Separator />
 
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-sm text-blue-600 mb-1">Lợi nhuận dự kiến/năm</div>
+                    <div className="text-sm text-blue-600 mb-1">
+                      Lợi nhuận dự kiến/năm
+                    </div>
                     <div className="text-2xl font-bold text-blue-800">
                       {formatVND(summaryMetrics.yearlyReturn)}
                     </div>
@@ -406,13 +494,18 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                   <CardContent>
                     <div className="space-y-2">
                       {warnings.slice(0, 3).map((warning, index) => (
-                        <p key={index} className="text-sm text-red-700 flex items-start gap-2">
+                        <p
+                          key={index}
+                          className="text-sm text-red-700 flex items-start gap-2"
+                        >
                           <span className="text-red-500 mt-0.5">•</span>
                           {warning}
                         </p>
                       ))}
                       {warnings.length > 3 && (
-                        <p className="text-xs text-red-600">+{warnings.length - 3} cảnh báo khác...</p>
+                        <p className="text-xs text-red-600">
+                          +{warnings.length - 3} cảnh báo khác...
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -430,13 +523,18 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                   <CardContent>
                     <div className="space-y-2">
                       {suggestions.slice(0, 3).map((suggestion, index) => (
-                        <p key={index} className="text-sm text-blue-700 flex items-start gap-2">
+                        <p
+                          key={index}
+                          className="text-sm text-blue-700 flex items-start gap-2"
+                        >
                           <span className="text-blue-500 mt-0.5">•</span>
                           {suggestion}
                         </p>
                       ))}
                       {suggestions.length > 3 && (
-                        <p className="text-xs text-blue-600">+{suggestions.length - 3} gợi ý khác...</p>
+                        <p className="text-xs text-blue-600">
+                          +{suggestions.length - 3} gợi ý khác...
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -448,7 +546,7 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
 
         {/* AI Analysis Tab - NEW FEATURE */}
         <TabsContent value="ai-analysis" className="space-y-6">
-          <AIAdvisorySystem 
+          <AIAdvisorySystem
             result={result}
             onScenarioGenerated={(scenarios) => {
               console.log("Generated scenarios:", scenarios);
@@ -469,28 +567,36 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cashFlowOverTime.filter((_, index) => index % 3 === 0)}>
+                  <LineChart
+                    data={cashFlowOverTime.filter(
+                      (_, index) => index % 3 === 0
+                    )}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" />
-                    <YAxis tickFormatter={(value) => `${(value/1000000).toFixed(0)}M`} />
-                    <Tooltip 
+                    <YAxis
+                      tickFormatter={(value) =>
+                        `${(value / 1000000).toFixed(0)}M`
+                      }
+                    />
+                    <Tooltip
                       formatter={(value, name) => [
-                        formatVND(Number(value)), 
-                        name === 'cashFlow' ? 'Dòng tiền/tháng' : 'Tích lũy'
+                        formatVND(Number(value)),
+                        name === "cashFlow" ? "Dòng tiền/tháng" : "Tích lũy",
                       ]}
                       labelFormatter={(year) => `Năm ${year}`}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cashFlow" 
-                      stroke={CHART_COLORS.primary} 
+                    <Line
+                      type="monotone"
+                      dataKey="cashFlow"
+                      stroke={CHART_COLORS.primary}
                       strokeWidth={2}
                       name="Dòng tiền"
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cumulativeCashFlow" 
-                      stroke={CHART_COLORS.secondary} 
+                    <Line
+                      type="monotone"
+                      dataKey="cumulativeCashFlow"
+                      stroke={CHART_COLORS.secondary}
                       strokeWidth={2}
                       name="Tích lũy"
                     />
@@ -517,16 +623,23 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
                       >
                         {expenseBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={PIE_COLORS[index % PIE_COLORS.length]}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => formatVND(Number(value))} />
+                      <Tooltip
+                        formatter={(value) => formatVND(Number(value))}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -540,21 +653,31 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
               <CardContent>
                 <div className="space-y-3">
                   {expenseBreakdown.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center"
+                    >
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{
+                            backgroundColor:
+                              PIE_COLORS[index % PIE_COLORS.length],
+                          }}
                         />
                         <span>{item.name}</span>
                       </div>
-                      <span className="font-semibold">{formatVND(item.value)}</span>
+                      <span className="font-semibold">
+                        {formatVND(item.value)}
+                      </span>
                     </div>
                   ))}
                   <Separator />
                   <div className="flex justify-between items-center font-bold">
                     <span>Tổng chi phí:</span>
-                    <span className="text-red-600">{formatVND(steps.tongChiPhiVanHanh)}</span>
+                    <span className="text-red-600">
+                      {formatVND(steps.tongChiPhiVanHanh)}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -574,18 +697,29 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cashFlowOverTime.filter((_, index) => index % 6 === 0)}>
+                  <LineChart
+                    data={cashFlowOverTime.filter(
+                      (_, index) => index % 6 === 0
+                    )}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" />
-                    <YAxis tickFormatter={(value) => `${(value/1000000000).toFixed(1)}B`} />
-                    <Tooltip 
-                      formatter={(value) => [formatVND(Number(value)), 'Tài sản ròng']}
+                    <YAxis
+                      tickFormatter={(value) =>
+                        `${(value / 1000000000).toFixed(1)}B`
+                      }
+                    />
+                    <Tooltip
+                      formatter={(value) => [
+                        formatVND(Number(value)),
+                        "Tài sản ròng",
+                      ]}
                       labelFormatter={(year) => `Năm ${year}`}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="netWorth" 
-                      stroke={CHART_COLORS.positive} 
+                    <Line
+                      type="monotone"
+                      dataKey="netWorth"
+                      stroke={CHART_COLORS.positive}
                       strokeWidth={3}
                       name="Tài sản ròng"
                     />
@@ -593,7 +727,8 @@ export default function CalculationResults({ result, onExport, onNewCalculation 
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 text-sm text-muted-foreground">
-                * Dự báo giả định giá BĐS không đổi. Trong thực tế có thể tăng/giảm theo thị trường.
+                * Dự báo giả định giá BĐS không đổi. Trong thực tế có thể
+                tăng/giảm theo thị trường.
               </div>
             </CardContent>
           </Card>

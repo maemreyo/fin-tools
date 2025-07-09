@@ -679,8 +679,8 @@ export class TimelinePresetManager {
       return 'FIRST_TIME_BUYER';
     }
     if (preset.inputs.tienThueThang && preset.inputs.giaTriBDS) {
-      const yield = (preset.inputs.tienThueThang * 12 / preset.inputs.giaTriBDS) * 100;
-      if (yield > 6) return 'INVESTMENT_FOCUSED';
+      const _yield = (preset.inputs.tienThueThang * 12 / preset.inputs.giaTriBDS) * 100;
+      if (_yield > 6) return 'INVESTMENT_FOCUSED';
     }
     return 'FLEXIBLE_CASHFLOW';
   }
