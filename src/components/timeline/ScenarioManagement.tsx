@@ -706,7 +706,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({
               <div>
                 <div className="text-muted-foreground">ROI</div>
                 <div className="font-semibold text-green-600">
-                  {stats.roi.toFixed(1)}%
+                  {(stats.roi || 0).toFixed(1)}%
                 </div>
               </div>
               <div>

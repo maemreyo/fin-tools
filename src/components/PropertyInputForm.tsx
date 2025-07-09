@@ -61,7 +61,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-import { RealEstateInputs, DEFAULT_VALUES } from "@/types/real-estate";
+import { RealEstateInputs, DEFAULT_VALUES, PresetScenario } from "@/types/real-estate";
 import { TimelineEnabledInputs } from "@/types/timeline-integration";
 import { formatVND, parseVND } from "@/lib/financial-utils";
 
@@ -118,6 +118,7 @@ interface EnhancedPropertyInputFormProps {
   isLoading?: boolean;
   mode?: 'CLASSIC' | 'TIMELINE'; // 🆕 Mode indicator
   showTimelineToggle?: boolean; // 🆕 Option to show timeline toggle
+  selectedPreset?: PresetScenario | null; // 🆕 Selected preset to populate form
 }
 
 // ===== SMART CURRENCY INPUT COMPONENT =====
@@ -128,10 +129,20 @@ const SmartCurrencyInput: React.FC<{
   className?: string;
   showShorthand?: boolean;
   disabled?: boolean;
-}> = ({ value, onChange, placeholder, className, showShorthand = true, disabled = false }) => {
+  tooltip?: string;
+}> = ({ value, onChange, placeholder, className, showShorthand = true, disabled = false, tooltip }) => {
   const [displayValue, setDisplayValue] = React.useState(
     value ? formatVND(value, !showShorthand) : ""
   );
+
+  // Update display value when value prop changes (for preset loading)
+  React.useEffect(() => {
+    if (value) {
+      setDisplayValue(formatVND(value, !showShorthand));
+    } else {
+      setDisplayValue("");
+    }
+  }, [value, showShorthand]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -148,14 +159,26 @@ const SmartCurrencyInput: React.FC<{
   };
 
   return (
-    <Input
-      value={displayValue}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      placeholder={placeholder}
-      className={className}
-      disabled={disabled}
-    />
+    <div className="flex items-center gap-2">
+      <Input
+        value={displayValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={`flex-1 ${className || ""}`}
+        disabled={disabled}
+      />
+      {tooltip && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help flex-shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-xs">{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 };
 
@@ -170,29 +193,29 @@ const PercentageInput: React.FC<{
   disabled?: boolean;
 }> = ({ value, onChange, tooltip, min = 0, max = 100, step = 0.1, disabled = false }) => {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            value={value || ""}
-            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-            min={min}
-            max={max}
-            step={step}
-            className="w-20"
-            disabled={disabled}
-          />
-          <span className="text-sm text-muted-foreground">%</span>
-          {tooltip && <HelpCircle className="h-4 w-4 text-muted-foreground" />}
-        </div>
-      </TooltipTrigger>
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        value={value || ""}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        min={min}
+        max={max}
+        step={step}
+        className="w-20"
+        disabled={disabled}
+      />
+      <span className="text-sm text-muted-foreground">%</span>
       {tooltip && (
-        <TooltipContent>
-          <p className="max-w-xs">{tooltip}</p>
-        </TooltipContent>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-xs">{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
       )}
-    </Tooltip>
+    </div>
   );
 };
 
@@ -203,7 +226,8 @@ export default function EnhancedPropertyInputForm({
   initialValues,
   isLoading,
   mode = 'CLASSIC',
-  showTimelineToggle = true
+  showTimelineToggle = true,
+  selectedPreset
 }: EnhancedPropertyInputFormProps) {
   // ===== STATE MANAGEMENT =====
   const [timelineMode, setTimelineMode] = useState(mode === 'TIMELINE');
@@ -212,6 +236,7 @@ export default function EnhancedPropertyInputForm({
   const [showTimelineSettings, setShowTimelineSettings] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isTimelineReady, setIsTimelineReady] = useState(false);
+  const [presetLoaded, setPresetLoaded] = useState<string | null>(null);
 
   // ===== FORM SETUP =====
   const form = useForm<TimelineEnabledInputs>({
@@ -231,6 +256,46 @@ export default function EnhancedPropertyInputForm({
 
   const watchedValues = form.watch();
   const { formState: { errors, isValid } } = form;
+
+  // ===== PRESET HANDLER =====
+  React.useEffect(() => {
+    if (selectedPreset?.inputs) {
+      // Populate form with preset values
+      Object.entries(selectedPreset.inputs).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          try {
+            form.setValue(key as keyof TimelineEnabledInputs, value, { shouldValidate: true });
+          } catch (error) {
+            console.warn(`Failed to set form value for ${key}:`, error);
+          }
+        }
+      });
+      
+      // Show advanced sections if preset has advanced values
+      const hasAdvancedValues = (selectedPreset.inputs.phiQuanLy && selectedPreset.inputs.phiQuanLy > 0) || 
+                               (selectedPreset.inputs.phiBaoTri && selectedPreset.inputs.phiBaoTri !== 1) || 
+                               (selectedPreset.inputs.tyLeLapDay && selectedPreset.inputs.tyLeLapDay !== 95);
+      if (hasAdvancedValues) {
+        setShowAdvanced(true);
+      }
+      
+      // Show loan details if preset has custom loan values
+      const hasCustomLoanValues = (selectedPreset.inputs.laiSuatUuDai && selectedPreset.inputs.laiSuatUuDai !== 8) || 
+                                 (selectedPreset.inputs.thoiGianUuDai && selectedPreset.inputs.thoiGianUuDai !== 12) || 
+                                 (selectedPreset.inputs.laiSuatThaNoi && selectedPreset.inputs.laiSuatThaNoi !== 10);
+      if (hasCustomLoanValues) {
+        setShowLoanDetails(true);
+      }
+      
+      // Set preset loaded indicator
+      setPresetLoaded(selectedPreset.name || 'Template');
+      
+      // Clear preset loaded indicator after 3 seconds
+      setTimeout(() => {
+        setPresetLoaded(null);
+      }, 3000);
+    }
+  }, [selectedPreset, form]);
 
   // ===== TIMELINE MODE HANDLER =====
   const handleTimelineModeToggle = useCallback((enabled: boolean) => {
@@ -420,6 +485,16 @@ export default function EnhancedPropertyInputForm({
           </Alert>
         )}
 
+        {/* ===== PRESET LOADED ALERT ===== */}
+        {presetLoaded && (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription className="text-green-800">
+              <strong>Đã tải template "{presetLoaded}"!</strong> Các thông tin đã được điền tự động vào form. Bạn có thể chỉnh sửa theo nhu cầu.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* ===== CORE PROPERTY INFORMATION ===== */}
         <Card>
           <CardHeader>
@@ -574,7 +649,17 @@ export default function EnhancedPropertyInputForm({
 
                 {/* Grace Period */}
                 <div className="space-y-2">
-                  <Label>Thời gian grace period (tháng)</Label>
+                  <Label className="flex items-center gap-2">
+                    Thời gian grace period (tháng)
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Thời gian ân hạn không phải trả nợ gốc, chỉ trả lãi. Thường áp dụng trong giai đoạn xây dựng hoặc chờ cho thuê.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
                   <Input
                     type="number"
                     value={watchedValues.defaultGracePeriod || 0}
@@ -599,25 +684,40 @@ export default function EnhancedPropertyInputForm({
                 <CollapsibleContent className="space-y-4 pt-4">
                   {/* Inflation */}
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label>Tính lạm phát</Label>
+                    <div className="space-y-1 flex-1">
+                      <Label className="flex items-center gap-2">
+                        Tính lạm phát
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">Tự động điều chỉnh các chi phí (quản lý, bảo trì, bảo hiểm) tăng theo tỷ lệ lạm phát hàng năm.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
                       <p className="text-sm text-muted-foreground">
                         Tự động điều chỉnh chi phí theo lạm phát
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-[140px] justify-end">
                       <Switch
                         checked={watchedValues.includeInflation || false}
                         onCheckedChange={(checked) => form.setValue('includeInflation', checked)}
                       />
-                      {watchedValues.includeInflation && (
-                        <PercentageInput
-                          value={watchedValues.inflationRate || 3.0}
-                          onChange={(value) => form.setValue('inflationRate', value)}
-                          max={15}
-                          step={0.1}
-                        />
-                      )}
+                      <div className="w-[80px]">
+                        {watchedValues.includeInflation ? (
+                          <PercentageInput
+                            value={watchedValues.inflationRate || 3.0}
+                            onChange={(value) => form.setValue('inflationRate', value)}
+                            max={15}
+                            step={0.1}
+                            tooltip="Tỷ lệ lạm phát hàng năm (%)"
+                          />
+                        ) : (
+                          <div className="h-10" />
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -625,25 +725,40 @@ export default function EnhancedPropertyInputForm({
 
                   {/* Property Appreciation */}
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label>Tăng giá BĐS</Label>
+                    <div className="space-y-1 flex-1">
+                      <Label className="flex items-center gap-2">
+                        Tăng giá BĐS
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">Mô phỏng tăng giá trị bất động sản theo thời gian, ảnh hưởng đến tài sản ròng và khả năng tái cấp vốn.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
                       <p className="text-sm text-muted-foreground">
                         Mô phỏng tăng giá bất động sản theo thời gian
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-[140px] justify-end">
                       <Switch
                         checked={watchedValues.includePropertyAppreciation || false}
                         onCheckedChange={(checked) => form.setValue('includePropertyAppreciation', checked)}
                       />
-                      {watchedValues.includePropertyAppreciation && (
-                        <PercentageInput
-                          value={watchedValues.appreciationRate || 5.0}
-                          onChange={(value) => form.setValue('appreciationRate', value)}
-                          max={20}
-                          step={0.1}
-                        />
-                      )}
+                      <div className="w-[80px]">
+                        {watchedValues.includePropertyAppreciation ? (
+                          <PercentageInput
+                            value={watchedValues.appreciationRate || 5.0}
+                            onChange={(value) => form.setValue('appreciationRate', value)}
+                            max={20}
+                            step={0.1}
+                            tooltip="Tỷ lệ tăng giá BĐS hàng năm (%)"
+                          />
+                        ) : (
+                          <div className="h-10" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CollapsibleContent>
@@ -678,7 +793,17 @@ export default function EnhancedPropertyInputForm({
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Thời gian ưu đãi (tháng)</Label>
+                    <Label className="flex items-center gap-2">
+                      Thời gian ưu đãi (tháng)
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">Thời gian áp dụng lãi suất ưu đãi thấp hơn. Sau đó sẽ chuyển sang lãi suất thả nổi cao hơn.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
                     <Input
                       type="number"
                       value={watchedValues.thoiGianUuDai || 12}
@@ -699,7 +824,17 @@ export default function EnhancedPropertyInputForm({
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Thời gian vay (năm)</Label>
+                    <Label className="flex items-center gap-2">
+                      Thời gian vay (năm)
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">Tổng thời gian vay tiền từ ngân hàng. Thời gian càng dài, số tiền trả hàng tháng càng thấp nhưng tổng lãi phải trả càng cao.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
                     <Input
                       type="number"
                       value={watchedValues.thoiGianVay || 20}
@@ -746,6 +881,7 @@ export default function EnhancedPropertyInputForm({
                       value={watchedValues.phiQuanLy || 0}
                       onChange={(value) => form.setValue('phiQuanLy', value)}
                       placeholder="VD: 500,000"
+                      tooltip="Chi phí thuê công ty quản lý bất động sản (nếu có). Thường từ 5-10% tiền thuê."
                     />
                   </div>
                   
@@ -766,6 +902,26 @@ export default function EnhancedPropertyInputForm({
                       onChange={(value) => form.setValue('thueSuatChoThue', value)}
                       tooltip="Thuế phải nộp trên thu nhập cho thuê"
                       max={50}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Thu nhập khác/tháng</Label>
+                    <SmartCurrencyInput
+                      value={watchedValues.thuNhapKhac || 0}
+                      onChange={(value) => form.setValue('thuNhapKhac', value)}
+                      placeholder="VD: 5,000,000"
+                      tooltip="Thu nhập từ các nguồn khác ngoài cho thuê BĐS (lương, kinh doanh, đầu tư...)"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Chi phí sinh hoạt/tháng</Label>
+                    <SmartCurrencyInput
+                      value={watchedValues.chiPhiSinhHoat || 0}
+                      onChange={(value) => form.setValue('chiPhiSinhHoat', value)}
+                      placeholder="VD: 10,000,000"
+                      tooltip="Chi phí sinh hoạt cá nhân/gia đình hàng tháng để tính toán dòng tiền thực tế"
                     />
                   </div>
                 </div>
@@ -809,7 +965,8 @@ export default function EnhancedPropertyInputForm({
                 type="submit"
                 size="lg"
                 className="w-full"
-                disabled={isLoading || !isValid}
+                // disabled={isLoading || !isValid}
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

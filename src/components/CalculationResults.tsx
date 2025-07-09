@@ -231,16 +231,16 @@ export default function CalculationResults({
                   </div>
                   <div
                     className={`text-2xl font-bold ${
-                      result.roiHangNam > 0 ? "text-green-600" : "text-red-600"
+                      (result.roiHangNam || 0) > 0 ? "text-green-600" : "text-red-600"
                     }`}
                   >
-                    {result.roiHangNam.toFixed(1)}%
+                    {(result.roiHangNam || 0).toFixed(1)}%
                   </div>
                   <Badge
                     variant={
-                      result.roiHangNam > 10
+                      (result.roiHangNam || 0) > 10
                         ? "default"
-                        : result.roiHangNam > 5
+                        : (result.roiHangNam || 0) > 5
                         ? "secondary"
                         : "destructive"
                     }
@@ -284,7 +284,7 @@ export default function CalculationResults({
                     {summaryMetrics.riskLevel}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Vay {inputs.tyLeVay.toFixed(0)}% giá trị
+                    Vay {(inputs.tyLeVay || 0).toFixed(0)}% giá trị
                   </div>
                 </div>
               </CardContent>
@@ -309,12 +309,12 @@ export default function CalculationResults({
                 : "Dòng tiền âm"}
             </Badge>
 
-            <Badge variant={result.rentalYield > 5 ? "default" : "secondary"}>
-              Yield: {result.rentalYield?.toFixed(2)}%
+            <Badge variant={(result.rentalYield || 0) > 5 ? "default" : "secondary"}>
+              Yield: {(result.rentalYield || 0).toFixed(2)}%
             </Badge>
 
-            <Badge variant={inputs.tyLeVay <= 70 ? "default" : "destructive"}>
-              LTV: {inputs.tyLeVay.toFixed(0)}%
+            <Badge variant={(inputs.tyLeVay || 0) <= 70 ? "default" : "destructive"}>
+              LTV: {(inputs.tyLeVay || 0).toFixed(0)}%
             </Badge>
 
             {warnings.length > 0 && (

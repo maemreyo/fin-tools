@@ -510,7 +510,7 @@ export class InterestRateChangeProcessor extends BaseEventProcessor<InterestRate
     
     additionalEffects.push({
       type: 'RECALCULATE_PAYMENTS',
-      description: `Interest rate changed: ${event.oldRate}% → ${event.newRate}% (${rateDifference > 0 ? '+' : ''}${rateDifference.toFixed(2)}%)`,
+      description: `Interest rate changed: ${event.oldRate}% → ${event.newRate}% (${rateDifference > 0 ? '+' : ''}${(rateDifference || 0).toFixed(2)}%)`,
       data: {
         oldRate: event.oldRate,
         newRate: event.newRate,

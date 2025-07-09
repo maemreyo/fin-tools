@@ -278,7 +278,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
     factorCount++;
 
     // ROI assessment
-    const roi = result.roiHangNam;
+    const roi = result.roiHangNam || 0;
     if (roi < 5) {
       factors.push({
         type: "RENTAL_YIELD",
@@ -590,7 +590,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
                 <Card className="border-green-200 bg-green-50">
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-green-700">
-                      +{timelineUpgradeAnalysis.estimatedBenefits.accuracyImprovement.toFixed(0)}%
+                      +{(timelineUpgradeAnalysis.estimatedBenefits.accuracyImprovement || 0).toFixed(0)}%
                     </div>
                     <div className="text-sm text-green-600">Độ chính xác</div>
                   </CardContent>
@@ -606,7 +606,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
                 <Card className="border-purple-200 bg-purple-50">
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-purple-700">
-                      -{timelineUpgradeAnalysis.estimatedBenefits.riskReduction.toFixed(0)}%
+                      -{(timelineUpgradeAnalysis.estimatedBenefits.riskReduction || 0).toFixed(0)}%
                     </div>
                     <div className="text-sm text-purple-600">Giảm rủi ro</div>
                   </CardContent>
@@ -644,18 +644,20 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
                     AI Suggested Events ({timelineUpgradeAnalysis.suggestedEvents.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {timelineUpgradeAnalysis.suggestedEvents.slice(0, 4).map((event, index) => (
-                      <Card key={index} className="border-amber-200 bg-amber-50">
+                    {timelineUpgradeAnalysis.suggestedEvents.slice(0, 4).map((event, index) => {
+                      console.log('Suggested event:', event);
+                      return (
+                        <Card key={index} className="border-amber-200 bg-amber-50">
                         <CardContent className="p-3">
                           <div className="flex items-start gap-3">
                             <div className="p-1 bg-amber-100 rounded">
                               {getEventTypeIcon(event.type)}
                             </div>
                             <div className="flex-1">
-                              <div className="font-medium text-sm">{event.templateData.type}</div>
+                              <div className="font-medium text-sm">{event.type}</div>
                               <div className="text-xs text-muted-foreground">{event.reasoning}</div>
                               <div className="text-xs text-green-600 mt-1">
-                                💰 Tiết kiệm: {formatVND(event.estimatedImpact.totalSavings)}
+                                💰 Tiết kiệm: {formatVND(event.estimatedImpact?.totalSavings)}
                               </div>
                             </div>
                             <Badge variant="outline" className="text-xs">
@@ -664,7 +666,8 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

@@ -49,7 +49,7 @@ import {
   ChevronRight,
   Rocket,
   Target,
-  Clock
+  Clock,
 } from "lucide-react";
 
 import PropertyInputForm from "@/components/PropertyInputForm";
@@ -67,7 +67,10 @@ import { calculateRealEstateInvestment } from "@/lib/real-estate-calculator";
 // ===== LAZY LOAD TIMELINE COMPONENTS =====
 // Optimize bundle size by loading Timeline components only when needed
 const TimelineDashboard = dynamic(
-  () => import("@/components/timeline/TimelineDashboard").then(mod => ({ default: mod.TimelineDashboard })),
+  () =>
+    import("@/components/timeline/TimelineDashboard").then((mod) => ({
+      default: mod.TimelineDashboard,
+    })),
   {
     loading: () => (
       <Card className="h-96">
@@ -79,12 +82,75 @@ const TimelineDashboard = dynamic(
         </CardContent>
       </Card>
     ),
-    ssr: false
+    ssr: false,
   }
 );
 
 // ===== PRESET SCENARIOS (Enhanced for Timeline) =====
 const PRESET_SCENARIOS: PresetScenario[] = [
+  {
+    id: "studio-gialam-cautious",
+    name: "Studio Gia Lâm (Kịch bản Thận trọng)",
+    description:
+      "Kịch bản thận trọng cho căn Studio tại Masterise Lakeside, dựa trên các giả định lãi suất cao và tiền thuê thấp mà chúng ta đã thảo luận.",
+    category: "chung-cu",
+    location: "hanoi",
+    inputs: {
+      giaTriBDS: 2397000000,
+      chiPhiTrangBi: 100000000,
+      tyLeVay: 70,
+      thoiGianVay: 35,
+      laiSuatUuDai: 8.0,
+      thoiGianUuDai: 12,
+      laiSuatThaNoi: 10.0,
+      tienThueThang: 6000000,
+      phiQuanLy: 480000,
+      tyLeLapDay: 95,
+      thueSuatChoThue: 10,
+    },
+  },
+  {
+    id: "1br-gialam-official",
+    name: "1PN Gia Lâm (Theo CĐT)",
+    description:
+      "Phân tích dựa trên phiếu tính giá chính thức từ Chủ đầu tư cho căn 1PN diện tích 44.8m2.",
+    category: "chung-cu",
+    location: "hanoi",
+    inputs: {
+      giaTriBDS: 3512264492,
+      chiPhiTrangBi: 150000000,
+      tyLeVay: 70,
+      thoiGianVay: 35,
+      laiSuatUuDai: 8.0,
+      thoiGianUuDai: 24, // Dựa trên chính sách ân hạn thực tế
+      laiSuatThaNoi: 10.0,
+      tienThueThang: 14000000,
+      phiQuanLy: 716800,
+      tyLeLapDay: 95,
+      thueSuatChoThue: 10,
+    },
+  },
+  {
+    id: "2br-namtuliem-standard",
+    name: "2PN Nam Từ Liêm (Kịch bản Tiêu chuẩn)",
+    description:
+      "Một phương án tham khảo cho căn hộ 2PN điển hình tại khu vực Mỹ Đình, Nam Từ Liêm, phù hợp cho gia đình ở hoặc đầu tư cho thuê.",
+    category: "chung-cu",
+    location: "hanoi",
+    inputs: {
+      giaTriBDS: 4000000000,
+      chiPhiTrangBi: 200000000,
+      tyLeVay: 60,
+      thoiGianVay: 25,
+      laiSuatUuDai: 7.8,
+      thoiGianUuDai: 18,
+      laiSuatThaNoi: 9.8,
+      tienThueThang: 16000000,
+      phiQuanLy: 1200000,
+      tyLeLapDay: 95,
+      thueSuatChoThue: 10,
+    },
+  },
   {
     id: "starter-apartment",
     name: "🏠 Chung cư starter - Người mới",
@@ -109,9 +175,10 @@ const PRESET_SCENARIOS: PresetScenario[] = [
   {
     id: "premium-investment",
     name: "💎 Căn hộ cao cấp - Nhà đầu tư",
-    description: "Căn hộ 3PN cao cấp, ROI cao, thích hợp investor có kinh nghiệm",
+    description:
+      "Căn hộ 3PN cao cấp, ROI cao, thích hợp investor có kinh nghiệm",
     category: "chung-cu",
-    location: "hcm", 
+    location: "hcm",
     inputs: {
       giaTriBDS: 5200000000,
       vonTuCo: 1800000000,
@@ -130,7 +197,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
   {
     id: "townhouse-family",
     name: "🏘️ Nhà phố - Gia đình trẻ",
-    description: "Nhà phố 4x15m, vừa ở vừa cho thuê, phù hợp gia đình có con nhỏ",
+    description:
+      "Nhà phố 4x15m, vừa ở vừa cho thuê, phù hợp gia đình có con nhỏ",
     category: "nha-pho",
     location: "hcm",
     inputs: {
@@ -151,8 +219,8 @@ const PRESET_SCENARIOS: PresetScenario[] = [
 ];
 
 // ===== INTERFACE TYPES =====
-type CalculatorMode = 'CLASSIC' | 'TIMELINE';
-type ViewState = 'INPUT' | 'RESULTS' | 'TIMELINE';
+type CalculatorMode = "CLASSIC" | "TIMELINE";
+type ViewState = "INPUT" | "RESULTS" | "TIMELINE";
 
 interface AppState {
   mode: CalculatorMode;
@@ -170,8 +238,8 @@ interface AppState {
 export default function EnhancedRealEstateCalculatorPage() {
   // ===== STATE MANAGEMENT =====
   const [appState, setAppState] = useState<AppState>({
-    mode: 'CLASSIC',
-    viewState: 'INPUT',
+    mode: "CLASSIC",
+    viewState: "INPUT",
     currentInputs: null,
     currentResult: null,
     selectedPreset: null,
@@ -187,121 +255,146 @@ export default function EnhancedRealEstateCalculatorPage() {
 
   // ===== LOAD SAVED DATA =====
   useEffect(() => {
-    const savedHistory = localStorage.getItem('calculation-history');
-    const savedScenarios = localStorage.getItem('timeline-scenarios');
-    
+    const savedHistory = localStorage.getItem("calculation-history");
+    const savedScenarios = localStorage.getItem("timeline-scenarios");
+
     if (savedHistory) {
       try {
         const history = JSON.parse(savedHistory);
-        setAppState(prev => ({ ...prev, calculationHistory: history }));
+        setAppState((prev) => ({ ...prev, calculationHistory: history }));
       } catch (error) {
-        console.error('Failed to load calculation history:', error);
+        console.error("Failed to load calculation history:", error);
       }
     }
 
     if (savedScenarios) {
       try {
         const scenarios = JSON.parse(savedScenarios);
-        setAppState(prev => ({ ...prev, timelineScenarios: scenarios }));
+        setAppState((prev) => ({ ...prev, timelineScenarios: scenarios }));
       } catch (error) {
-        console.error('Failed to load timeline scenarios:', error);
+        console.error("Failed to load timeline scenarios:", error);
       }
     }
   }, []);
 
   // ===== CALCULATION HANDLERS =====
-  const handleCalculate = useCallback(async (inputs: RealEstateInputs) => {
-    setAppState(prev => ({ ...prev, isCalculating: true }));
+  const handleCalculate = useCallback(
+    async (inputs: RealEstateInputs) => {
+      setAppState((prev) => ({ ...prev, isCalculating: true }));
 
-    try {
-      const result = calculateRealEstateInvestment(inputs);
-      
-      // Enhanced result with metadata
-      const enhancedResult = {
-        ...result,
-        calculatedAt: new Date().toISOString(),
-        calculationId: `calc_${Date.now()}`,
-        inputs: inputs
-      };
+      try {
+        const result = calculateRealEstateInvestment(inputs);
 
-      setAppState(prev => ({
-        ...prev,
-        currentInputs: inputs,
-        currentResult: enhancedResult,
-        viewState: 'RESULTS',
-        isCalculating: false,
-        calculationHistory: [enhancedResult, ...prev.calculationHistory.slice(0, 9)] // Keep last 10
-      }));
+        // Enhanced result with metadata
+        const enhancedResult = {
+          ...result,
+          calculatedAt: new Date().toISOString(),
+          calculationId: `calc_${Date.now()}`,
+          inputs: inputs,
+        };
 
-      // Save to localStorage
-      const newHistory = [enhancedResult, ...appState.calculationHistory.slice(0, 9)];
-      localStorage.setItem('calculation-history', JSON.stringify(newHistory));
+        setAppState((prev) => ({
+          ...prev,
+          currentInputs: inputs,
+          currentResult: enhancedResult,
+          viewState: "RESULTS",
+          isCalculating: false,
+          calculationHistory: [
+            enhancedResult,
+            ...prev.calculationHistory.slice(0, 9),
+          ], // Keep last 10
+        }));
 
-      toast.success("Tính toán thành công!", {
-        description: `ROI: ${result.roiHangNam.toFixed(1)}% - Dòng tiền: ${(result.steps.dongTienRongBDS / 1000000).toFixed(1)}M ₫`,
-      });
+        // Save to localStorage
+        const newHistory = [
+          enhancedResult,
+          ...appState.calculationHistory.slice(0, 9),
+        ];
+        localStorage.setItem("calculation-history", JSON.stringify(newHistory));
 
-    } catch (error) {
-      console.error('Calculation error:', error);
-      setAppState(prev => ({ ...prev, isCalculating: false }));
-      
-      toast.error("Lỗi tính toán", {
-        description: "Vui lòng kiểm tra lại thông tin đầu vào",
-      });
-    }
-  }, [appState.calculationHistory]);
+        toast.success("Tính toán thành công!", {
+          description: `ROI: ${(result.roiHangNam || 0).toFixed(
+            1
+          )}% - Dòng tiền: ${(
+            (result.steps.dongTienRongBDS || 0) / 1000000
+          ).toFixed(1)}M ₫`,
+        });
+      } catch (error) {
+        console.error("Calculation error:", error);
+        setAppState((prev) => ({ ...prev, isCalculating: false }));
+
+        toast.error("Lỗi tính toán", {
+          description: "Vui lòng kiểm tra lại thông tin đầu vào",
+        });
+      }
+    },
+    [appState.calculationHistory]
+  );
 
   // ===== MODE SWITCHING HANDLERS =====
-  const handleModeSwitch = useCallback((newMode: CalculatorMode) => {
-    if (newMode === 'TIMELINE' && !appState.hasTimelineAccess) {
-      toast.error("Timeline Mode chưa khả dụng", {
-        description: "Vui lòng nâng cấp tài khoản để sử dụng Timeline Mode",
-      });
-      return;
-    }
+  const handleModeSwitch = useCallback(
+    (newMode: CalculatorMode) => {
+      if (newMode === "TIMELINE" && !appState.hasTimelineAccess) {
+        toast.error("Timeline Mode chưa khả dụng", {
+          description: "Vui lòng nâng cấp tài khoản để sử dụng Timeline Mode",
+        });
+        return;
+      }
 
-    if (newMode === 'TIMELINE' && appState.currentInputs) {
-      setAppState(prev => ({
-        ...prev,
-        mode: newMode,
-        viewState: 'TIMELINE'
-      }));
-    } else {
-      setAppState(prev => ({
-        ...prev,
-        mode: newMode,
-        viewState: newMode === 'TIMELINE' ? 'TIMELINE' : 'INPUT'
-      }));
-    }
+      if (newMode === "TIMELINE" && appState.currentInputs) {
+        setAppState((prev) => ({
+          ...prev,
+          mode: newMode,
+          viewState: "TIMELINE",
+        }));
+      } else {
+        setAppState((prev) => ({
+          ...prev,
+          mode: newMode,
+          viewState: newMode === "TIMELINE" ? "TIMELINE" : "INPUT",
+        }));
+      }
 
-    toast.success(`Đã chuyển sang ${newMode === 'CLASSIC' ? 'Classic' : 'Timeline'} Mode`);
-  }, [appState.hasTimelineAccess, appState.currentInputs]);
+      toast.success(
+        `Đã chuyển sang ${newMode === "CLASSIC" ? "Classic" : "Timeline"} Mode`
+      );
+    },
+    [appState.hasTimelineAccess, appState.currentInputs]
+  );
 
   // ===== TIMELINE HANDLERS =====
-  const handleTimelineScenarioSave = useCallback((scenario: TimelineScenario) => {
-    const newScenarios = [...appState.timelineScenarios, scenario];
-    setAppState(prev => ({ ...prev, timelineScenarios: newScenarios }));
-    localStorage.setItem('timeline-scenarios', JSON.stringify(newScenarios));
-    
-    toast.success("Đã lưu timeline scenario", {
-      description: scenario.scenarioName,
-    });
-  }, [appState.timelineScenarios]);
+  const handleTimelineScenarioSave = useCallback(
+    (scenario: TimelineScenario) => {
+      const newScenarios = [...appState.timelineScenarios, scenario];
+      setAppState((prev) => ({ ...prev, timelineScenarios: newScenarios }));
+      localStorage.setItem("timeline-scenarios", JSON.stringify(newScenarios));
 
-  const handleTimelineScenarioLoad = useCallback((scenarioId: string) => {
-    const scenario = appState.timelineScenarios.find(s => s.id === scenarioId);
-    if (scenario) {
-      toast.success("Đã tải timeline scenario", {
+      toast.success("Đã lưu timeline scenario", {
         description: scenario.scenarioName,
       });
-    }
-  }, [appState.timelineScenarios]);
+    },
+    [appState.timelineScenarios]
+  );
+
+  const handleTimelineScenarioLoad = useCallback(
+    (scenarioId: string) => {
+      const scenario = appState.timelineScenarios.find(
+        (s) => s.id === scenarioId
+      );
+      if (scenario) {
+        toast.success("Đã tải timeline scenario", {
+          description: scenario.scenarioName,
+        });
+      }
+    },
+    [appState.timelineScenarios]
+  );
 
   // ===== PRESET HANDLERS =====
   const handlePresetSelect = useCallback((preset: PresetScenario) => {
-    setAppState(prev => ({ ...prev, selectedPreset: preset }));
+    setAppState((prev) => ({ ...prev, selectedPreset: preset }));
     setShowPresets(false);
-    
+
     toast.success("Đã chọn mẫu", {
       description: preset.name,
     });
@@ -309,7 +402,7 @@ export default function EnhancedRealEstateCalculatorPage() {
 
   // ===== UPGRADE TO TIMELINE =====
   const renderTimelineUpgradeCard = useMemo(() => {
-    if (appState.mode === 'TIMELINE' || !appState.currentResult) return null;
+    if (appState.mode === "TIMELINE" || !appState.currentResult) return null;
 
     return (
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -320,7 +413,9 @@ export default function EnhancedRealEstateCalculatorPage() {
                 <Rocket className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-blue-900">🚀 Nâng cấp Timeline Mode</CardTitle>
+                <CardTitle className="text-blue-900">
+                  🚀 Nâng cấp Timeline Mode
+                </CardTitle>
                 <CardDescription className="text-blue-700">
                   Mô phỏng 240 tháng chi tiết với events và tối ưu hóa
                 </CardDescription>
@@ -358,15 +453,15 @@ export default function EnhancedRealEstateCalculatorPage() {
               </ul>
             </div>
           </div>
-          
+
           <Separator />
-          
+
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               Dựa trên kết quả tính toán hiện tại
             </div>
-            <Button 
-              onClick={() => handleModeSwitch('TIMELINE')}
+            <Button
+              onClick={() => handleModeSwitch("TIMELINE")}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Calendar className="h-4 w-4 mr-2" />
@@ -402,16 +497,27 @@ export default function EnhancedRealEstateCalculatorPage() {
 
             {/* ===== MODE SELECTOR ===== */}
             <div className="flex justify-center">
-              <Tabs value={appState.mode} onValueChange={(mode: any) => handleModeSwitch(mode)}>
+              <Tabs
+                value={appState.mode}
+                onValueChange={(mode: any) => handleModeSwitch(mode)}
+              >
                 <TabsList className="grid w-full grid-cols-2 max-w-md h-12">
-                  <TabsTrigger value="CLASSIC" className="flex items-center gap-2 px-6">
+                  <TabsTrigger
+                    value="CLASSIC"
+                    className="flex items-center gap-2 px-6"
+                  >
                     <Calculator className="h-4 w-4" />
                     Classic Mode
                   </TabsTrigger>
-                  <TabsTrigger value="TIMELINE" className="flex items-center gap-2 px-6">
+                  <TabsTrigger
+                    value="TIMELINE"
+                    className="flex items-center gap-2 px-6"
+                  >
                     <Calendar className="h-4 w-4" />
                     Timeline Mode
-                    <Badge variant="secondary" className="text-xs">Pro</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Pro
+                    </Badge>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -420,7 +526,7 @@ export default function EnhancedRealEstateCalculatorPage() {
         </Card>
 
         {/* ===== CLASSIC MODE ===== */}
-        {appState.mode === 'CLASSIC' && (
+        {appState.mode === "CLASSIC" && (
           <div className="space-y-8">
             {/* Preset Scenarios */}
             {showPresets && (
@@ -429,7 +535,9 @@ export default function EnhancedRealEstateCalculatorPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-amber-600" />
-                      <CardTitle className="text-amber-900">Mẫu Có Sẵn</CardTitle>
+                      <CardTitle className="text-amber-900">
+                        Mẫu Có Sẵn
+                      </CardTitle>
                     </div>
                     <Button
                       variant="ghost"
@@ -454,8 +562,12 @@ export default function EnhancedRealEstateCalculatorPage() {
                         <CardContent className="p-4">
                           <div className="space-y-3">
                             <div>
-                              <h3 className="font-semibold text-sm">{preset.name}</h3>
-                              <p className="text-xs text-muted-foreground">{preset.description}</p>
+                              <h3 className="font-semibold text-sm">
+                                {preset.name}
+                              </h3>
+                              <p className="text-xs text-muted-foreground">
+                                {preset.description}
+                              </p>
                             </div>
                             <div className="flex items-center justify-between">
                               <Badge variant="outline" className="text-xs">
@@ -493,44 +605,80 @@ export default function EnhancedRealEstateCalculatorPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {appState.calculationHistory.slice(0, 6).map((result, index) => (
-                      <Card
-                        key={result.calculationId || index}
-                        className="cursor-pointer hover:shadow-sm transition-all border-gray-200"
-                        onClick={() => setAppState(prev => ({ ...prev, currentResult: result, viewState: 'RESULTS' }))}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="text-sm font-medium">
-                              Tính toán #{index + 1}
+                    {appState.calculationHistory
+                      .slice(0, 6)
+                      .map((result, index) => (
+                        <Card
+                          key={result.calculationId || index}
+                          className="cursor-pointer hover:shadow-sm transition-all border-gray-200"
+                          onClick={() =>
+                            setAppState((prev) => ({
+                              ...prev,
+                              currentResult: result,
+                              viewState: "RESULTS",
+                            }))
+                          }
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-sm font-medium">
+                                Tính toán #{index + 1}
+                              </div>
+                              <Badge
+                                variant={
+                                  (result.steps.dongTienRongBDS || 0) > 0
+                                    ? "default"
+                                    : "destructive"
+                                }
+                                className="text-xs shrink-0"
+                              >
+                                {(result.steps.dongTienRongBDS || 0) > 0
+                                  ? "Lời"
+                                  : "Lỗ"}
+                              </Badge>
                             </div>
-                            <Badge
-                              variant={result.steps.dongTienRongBDS > 0 ? "default" : "destructive"}
-                              className="text-xs shrink-0"
-                            >
-                              {result.steps.dongTienRongBDS > 0 ? "Lời" : "Lỗ"}
-                            </Badge>
-                          </div>
-                          <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">ROI:</span>
-                              <span className={`font-semibold ${result.roiHangNam > 0 ? "text-green-600" : "text-red-600"}`}>
-                                {result.roiHangNam.toFixed(1)}%
-                              </span>
+                            <div className="space-y-1 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  ROI:
+                                </span>
+                                <span
+                                  className={`font-semibold ${
+                                    (result.roiHangNam || 0) > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {(result.roiHangNam || 0).toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  Dòng tiền:
+                                </span>
+                                <span
+                                  className={`font-semibold ${
+                                    (result.steps.dongTienRongBDS || 0) > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {(
+                                    (result.steps.dongTienRongBDS || 0) /
+                                    1000000
+                                  ).toFixed(1)}
+                                  M ₫
+                                </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground pt-1 border-t">
+                                {new Date(
+                                  result.calculatedAt || ""
+                                ).toLocaleDateString("vi-VN")}
+                              </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Dòng tiền:</span>
-                              <span className={`font-semibold ${result.steps.dongTienRongBDS > 0 ? "text-green-600" : "text-red-600"}`}>
-                                {(result.steps.dongTienRongBDS / 1000000).toFixed(1)}M ₫
-                              </span>
-                            </div>
-                            <div className="text-xs text-muted-foreground pt-1 border-t">
-                              {new Date(result.calculatedAt || "").toLocaleDateString("vi-VN")}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -544,12 +692,12 @@ export default function EnhancedRealEstateCalculatorPage() {
             />
 
             {/* Results Section */}
-            {appState.currentResult && appState.viewState === 'RESULTS' && (
+            {appState.currentResult && appState.viewState === "RESULTS" && (
               <div className="space-y-6">
                 <CalculationResults result={appState.currentResult} />
-                <AIAdvisorySystem 
+                <AIAdvisorySystem
                   result={appState.currentResult}
-                  onTimelineUpgrade={() => handleModeSwitch('TIMELINE')}
+                  onTimelineUpgrade={() => handleModeSwitch("TIMELINE")}
                 />
                 {renderTimelineUpgradeCard}
               </div>
@@ -557,20 +705,24 @@ export default function EnhancedRealEstateCalculatorPage() {
 
             {/* Scenario Comparison */}
             {showComparison && appState.calculationHistory.length > 1 && (
-              <ScenarioComparison results={appState.calculationHistory.slice(0, 4)} />
+              <ScenarioComparison
+                results={appState.calculationHistory.slice(0, 4)}
+              />
             )}
           </div>
         )}
 
         {/* ===== TIMELINE MODE ===== */}
-        {appState.mode === 'TIMELINE' && (
+        {appState.mode === "TIMELINE" && (
           <div className="space-y-6">
             {/* Timeline Mode Header */}
             <Alert className="border-blue-200 bg-blue-50">
               <Calendar className="h-4 w-4" />
               <AlertDescription className="text-blue-800">
-                <strong>Timeline Mode:</strong> Phân tích 240 tháng với events và tối ưu hóa tự động.
-                {!appState.currentInputs && " Vui lòng nhập thông tin bất động sản để bắt đầu."}
+                <strong>Timeline Mode:</strong> Phân tích 240 tháng với events
+                và tối ưu hóa tự động.
+                {!appState.currentInputs &&
+                  " Vui lòng nhập thông tin bất động sản để bắt đầu."}
               </AlertDescription>
             </Alert>
 
@@ -590,13 +742,16 @@ export default function EnhancedRealEstateCalculatorPage() {
                     <Calendar className="h-12 w-12 text-blue-600" />
                   </div>
                   <div className="text-center space-y-2">
-                    <h3 className="text-lg font-semibold">Bắt đầu với Timeline</h3>
+                    <h3 className="text-lg font-semibold">
+                      Bắt đầu với Timeline
+                    </h3>
                     <p className="text-muted-foreground">
-                      Chuyển về Classic Mode để nhập thông tin bất động sản trước
+                      Chuyển về Classic Mode để nhập thông tin bất động sản
+                      trước
                     </p>
                   </div>
-                  <Button 
-                    onClick={() => handleModeSwitch('CLASSIC')}
+                  <Button
+                    onClick={() => handleModeSwitch("CLASSIC")}
                     variant="outline"
                   >
                     <Calculator className="h-4 w-4 mr-2" />

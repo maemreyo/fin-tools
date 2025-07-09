@@ -305,7 +305,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 <div>
                   <div className="text-muted-foreground">ROI</div>
                   <div className="font-semibold text-green-600">
-                    {analysis.roiHangNam.toFixed(1)}%
+                    {(analysis.roiHangNam || 0).toFixed(1)}%
                   </div>
                 </div>
                 <div>
@@ -363,13 +363,13 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 <div className="flex justify-between text-xs">
                   <span>Điểm rủi ro:</span>
                   <span className={`font-semibold ${analysis.riskScore < 20 ? 'text-green-600' : analysis.riskScore < 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {analysis.riskScore.toFixed(0)}/100
+                    {(analysis.riskScore || 0).toFixed(0)}/100
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span>Điểm tối ưu:</span>
                   <span className={`font-semibold ${analysis.optimizationScore > 70 ? 'text-green-600' : analysis.optimizationScore > 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {analysis.optimizationScore.toFixed(0)}/100
+                    {(analysis.optimizationScore || 0).toFixed(0)}/100
                   </span>
                 </div>
               </div>
@@ -423,7 +423,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                     {scenarioAnalyses.map(analysis => (
                       <td key={analysis.scenario.timelineId} className="text-center py-2">
                         <span className={analysis.rank.roi === 1 ? 'font-bold text-green-600' : ''}>
-                          {analysis.roiHangNam.toFixed(1)}%
+                          {(analysis.roiHangNam || 0).toFixed(1)}%
                         </span>
                       </td>
                     ))}
@@ -562,7 +562,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip formatter={(value: any) => [`${value.toFixed(1)}%`, 'ROI']} />
+                  <Tooltip formatter={(value: any) => [`${(value || 0).toFixed(1)}%`, 'ROI']} />
                   <Bar dataKey="roi">
                     {scenarioAnalyses.map((analysis, index) => (
                       <Cell key={index} fill={colors[index]} />
@@ -625,7 +625,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {bestScenario.roiHangNam.toFixed(1)}%
+                    {(bestScenario.roiHangNam || 0).toFixed(1)}%
                   </div>
                   <div className="text-sm text-muted-foreground">ROI hàng năm</div>
                 </div>
@@ -643,7 +643,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {bestScenario.riskScore.toFixed(0)}
+                    {(bestScenario.riskScore || 0).toFixed(0)}
                   </div>
                   <div className="text-sm text-muted-foreground">Điểm rủi ro</div>
                 </div>

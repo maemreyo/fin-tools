@@ -244,7 +244,7 @@ export default function ScenarioComparison({
               </p>
               <p className="text-sm text-blue-600">
                 {rankings.byPayback[0]
-                  ? `${rankings.byPayback[0].paybackPeriod.toFixed(1)} năm`
+                  ? `${(rankings.byPayback[0].paybackPeriod || 0).toFixed(1)} năm`
                   : "N/A"}
               </p>
             </div>
@@ -342,17 +342,18 @@ export default function ScenarioComparison({
                           {formatPercent(scenario.roiHangNam)}
                         </TableCell>
                         <TableCell
-                          className={`text-right ${
-                            scenario.paybackPeriod > 0
-                              ? getPerformanceColor(
-                                  scenario.paybackPeriod,
-                                  "payback"
-                                )
-                              : "text-gray-400"
+                          className={`text-right ${(
+                            scenario.paybackPeriod || 0
+                          ) > 0
+                            ? getPerformanceColor(
+                                scenario.paybackPeriod || 0,
+                                "payback"
+                              )
+                            : "text-gray-400"
                           }`}
                         >
-                          {scenario.paybackPeriod > 0
-                            ? `${scenario.paybackPeriod.toFixed(1)} năm`
+                          {(scenario.paybackPeriod || 0) > 0
+                            ? `${(scenario.paybackPeriod || 0).toFixed(1)} năm`
                             : "Không hoàn vốn"}
                         </TableCell>
                         <TableCell className="text-right">
@@ -412,7 +413,7 @@ export default function ScenarioComparison({
                       <YAxis />
                       <Tooltip
                         formatter={(value) => [
-                          `${Number(value).toFixed(2)}%`,
+                          `${Number(value || 0).toFixed(2)}%`,
                           "ROI",
                         ]}
                       />
@@ -437,7 +438,7 @@ export default function ScenarioComparison({
                       <YAxis />
                       <Tooltip
                         formatter={(value) => [
-                          `${Number(value).toFixed(1)} triệu VNĐ`,
+                          `${Number(value || 0).toFixed(1)} triệu VNĐ`,
                           "Dòng tiền",
                         ]}
                       />
@@ -469,7 +470,7 @@ export default function ScenarioComparison({
                       <YAxis />
                       <Tooltip
                         formatter={(value, name) => [
-                          `${Number(value).toFixed(1)} tỷ VNĐ`,
+                          `${Number(value || 0).toFixed(1)} tỷ VNĐ`,
                           name === "giaTriBDS" ? "Giá trị BĐS" : "Vốn đầu tư",
                         ]}
                       />
@@ -573,9 +574,9 @@ export default function ScenarioComparison({
                       {rankings.byPayback[0].scenarioName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Hoàn vốn: {rankings.byPayback[0].paybackPeriod.toFixed(1)}{" "}
+                      Hoàn vốn: {(rankings.byPayback[0].paybackPeriod || 0).toFixed(1)}{" "}
                       năm - ROI:{" "}
-                      {formatPercent(rankings.byPayback[0].roiHangNam)}
+                      {formatPercent(rankings.byPayback[0].roiHangNam || 0)}
                     </p>
                   </div>
                 )}

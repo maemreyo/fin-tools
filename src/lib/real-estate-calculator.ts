@@ -220,13 +220,13 @@ function generateWarnings(inputs: RealEstateInputs, steps: CalculationSteps): st
   // Cảnh báo thu nhập không đủ
   const incomeRatio = (inputs.thuNhapKhac - inputs.chiPhiSinhHoat) / inputs.thuNhapKhac;
   if (incomeRatio < 0.2) {
-    warnings.push(`⚠️ Thu nhập khả dụng chỉ ${(incomeRatio * 100).toFixed(1)}%, rủi ro tài chính cao`);
+    warnings.push(`⚠️ Thu nhập khả dụng chỉ ${((incomeRatio * 100) || 0).toFixed(1)}%, rủi ro tài chính cao`);
   }
   
   // Cảnh báo rental yield thấp
   const rentalYield = calculateRentalYield(inputs.giaTriBDS, inputs.tienThueThang, inputs.tyLeLapDay);
-  if (rentalYield < 5) {
-    warnings.push(`⚠️ Tỷ suất cho thuê ${rentalYield.toFixed(2)}%/năm thấp so với mặt bằng thị trường`);
+  if ((rentalYield || 0) < 5) {
+    warnings.push(`⚠️ Tỷ suất cho thuê ${(rentalYield || 0).toFixed(2)}%/năm thấp so với mặt bằng thị trường`);
   }
   
   return warnings;
@@ -260,7 +260,8 @@ function generateSuggestions(inputs: RealEstateInputs, steps: CalculationSteps):
   
   // Gợi ý tối ưu chi phí
   if (inputs.phiQuanLy > inputs.tienThueThang * 0.1) {
-    suggestions.push(`💡 Phí quản lý chiếm ${((inputs.phiQuanLy / inputs.tienThueThang) * 100).toFixed(1)}% tiền thuê, cân nhắc tự quản lý hoặc tìm công ty rẻ hơn`);
+    const feePercentage = inputs.tienThueThang > 0 ? (inputs.phiQuanLy / inputs.tienThueThang) * 100 : 0;
+    suggestions.push(`💡 Phí quản lý chiếm ${feePercentage.toFixed(1)}% tiền thuê, cân nhắc tự quản lý hoặc tìm công ty rẻ hơn`);
   }
   
   // Gợi ý about CapEx reserve

@@ -239,7 +239,7 @@ export function formatVND(amount: number): string {
  * Format phần trăm
  */
 export function formatPercent(value: number, decimals: number = 2): string {
-  return `${value.toFixed(decimals)}%`;
+  return `${(value || 0).toFixed(decimals)}%`;
 }
 
 /**
