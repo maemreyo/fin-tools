@@ -98,6 +98,7 @@ const PRESET_SCENARIOS: PresetScenario[] = [
     inputs: {
       giaTriBDS: 2397000000,
       chiPhiTrangBi: 100000000,
+      vonTuCo: 750000000,
       tyLeVay: 70,
       thoiGianVay: 35,
       laiSuatUuDai: 8.0,
@@ -119,6 +120,7 @@ const PRESET_SCENARIOS: PresetScenario[] = [
     inputs: {
       giaTriBDS: 3512264492,
       chiPhiTrangBi: 150000000,
+      vonTuCo: 750000000,
       tyLeVay: 70,
       thoiGianVay: 35,
       laiSuatUuDai: 8.0,
@@ -140,6 +142,7 @@ const PRESET_SCENARIOS: PresetScenario[] = [
     inputs: {
       giaTriBDS: 4000000000,
       chiPhiTrangBi: 200000000,
+      vonTuCo: 750000000,
       tyLeVay: 60,
       thoiGianVay: 25,
       laiSuatUuDai: 7.8,
