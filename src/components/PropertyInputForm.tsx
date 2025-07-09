@@ -62,7 +62,7 @@ import {
 import { format } from "date-fns";
 
 import { RealEstateInputs, DEFAULT_VALUES, PresetScenario } from "@/types/real-estate";
-import { TimelineEnabledInputs } from "@/types/timeline-integration";
+
 import { formatVND, parseVND } from "@/lib/financial-utils";
 
 // ===== ENHANCED VALIDATION SCHEMA =====

@@ -70,7 +70,7 @@ interface CalculationResultsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNewCalculation?: () => void;
-  onUpgradeToTimeline?: () => void;
+
 }
 
 // Color scheme cho charts
@@ -97,7 +97,7 @@ export default function CalculationResultsModal({
   isOpen,
   onClose,
   onNewCalculation,
-  onUpgradeToTimeline,
+
 }: CalculationResultsModalProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -227,12 +227,7 @@ Tạo bởi Real Estate Calculator - ${new Date().toLocaleDateString('vi-VN')}
                 <Download className="h-4 w-4 mr-1" />
                 Export
               </Button>
-              {onUpgradeToTimeline && (
-                <Button size="sm" onClick={onUpgradeToTimeline}>
-                  <Zap className="h-4 w-4 mr-1" />
-                  Timeline Mode
-                </Button>
-              )}
+             
             </div>
           </div>
         </DialogHeader>
@@ -646,46 +641,7 @@ Tạo bởi Real Estate Calculator - ${new Date().toLocaleDateString('vi-VN')}
                   </Card>
                 )}
 
-                {/* Timeline Upgrade Suggestion */}
-                {onUpgradeToTimeline && (
-                  <Card className="border-blue-200 bg-blue-50 lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="text-blue-800 flex items-center gap-2">
-                        <Zap className="h-5 w-5" />
-                        🚀 Nâng Cấp Timeline Mode
-                      </CardTitle>
-                      <CardDescription className="text-blue-700">
-                        Phân tích chuyên sâu với mô phỏng 240 tháng
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-blue-800">Tính năng Timeline:</h4>
-                          <ul className="text-sm text-blue-700 space-y-1">
-                            <li>✅ Mô phỏng 240 tháng chi tiết</li>
-                            <li>✅ Quản lý events và scenarios</li>
-                            <li>✅ So sánh kịch bản đầu tư</li>
-                            <li>✅ Tối ưu hóa timeline</li>
-                          </ul>
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-blue-800">Lợi ích:</h4>
-                          <ul className="text-sm text-blue-700 space-y-1">
-                            <li>📈 Dự báo chính xác hơn</li>
-                            <li>🎯 Tối ưu hóa ROI</li>
-                            <li>🔍 Phân tích rủi ro</li>
-                            <li>📊 Báo cáo chuyên nghiệp</li>
-                          </ul>
-                        </div>
-                      </div>
-                      <Button onClick={onUpgradeToTimeline} className="w-full">
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        Nâng cấp Timeline Mode ngay
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
+
               </div>
             </TabsContent>
           </Tabs>

@@ -358,7 +358,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
             </div>
             <div>
               <h3 className="text-xl font-bold text-purple-800">AI đang phân tích...</h3>
-              <p className="text-purple-600">Đánh giá rủi ro • Tạo kịch bản • Phân tích Timeline</p>
+              <p className="text-purple-600">Đánh giá rủi ro • Tạo kịch bản • Phân tích thông minh</p>
             </div>
             <div className="flex items-center justify-center gap-2">
               <div className="h-2 w-2 bg-purple-600 rounded-full animate-bounce"></div>
@@ -429,147 +429,7 @@ export const AIAdvisorySystem: React.FC<AIAdvisorySystemProps> = ({
         </Card>
 
 
-          <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Rocket className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-blue-900">🚀 Nâng cấp Timeline Mode</CardTitle>
-                    <CardDescription className="text-blue-700">
-                      Mô phỏng 240 tháng chi tiết với AI recommendations
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                    AI Powered
-                  </Badge>
-                  <Badge 
-                    className={getComplexityColor(timelineUpgradeAnalysis.upgradeComplexity)}
-                  >
-                    {timelineUpgradeAnalysis.upgradeComplexity === 'SIMPLE' ? 'Dễ' :
-                     timelineUpgradeAnalysis.upgradeComplexity === 'MODERATE' ? 'Vừa' : 'Phức tạp'}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Benefits Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-green-200 bg-green-50">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-green-700">
-                      +{(timelineUpgradeAnalysis.estimatedBenefits.accuracyImprovement || 0).toFixed(0)}%
-                    </div>
-                    <div className="text-sm text-green-600">Độ chính xác</div>
-                  </CardContent>
-                </Card>
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-blue-700">
-                      {formatVND(timelineUpgradeAnalysis.estimatedBenefits.optimizationPotential)}
-                    </div>
-                    <div className="text-sm text-blue-600">Tiềm năng tối ưu</div>
-                  </CardContent>
-                </Card>
-                <Card className="border-purple-200 bg-purple-50">
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-purple-700">
-                      -{(timelineUpgradeAnalysis.estimatedBenefits.riskReduction || 0).toFixed(0)}%
-                    </div>
-                    <div className="text-sm text-purple-600">Giảm rủi ro</div>
-                  </CardContent>
-                </Card>
-              </div>
 
-              {/* Timeline Preview */}
-              <div className="space-y-4">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Timeline Preview
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { period: "3 tháng", value: timelineUpgradeAnalysis.timelinePreview.month3 },
-                    { period: "1 năm", value: timelineUpgradeAnalysis.timelinePreview.month12 },
-                    { period: "2 năm", value: timelineUpgradeAnalysis.timelinePreview.month24 },
-                    { period: "5 năm", value: timelineUpgradeAnalysis.timelinePreview.month60 }
-                  ].map((item, index) => (
-                    <div key={index} className="text-center p-3 bg-white rounded-lg border">
-                      <div className="text-lg font-semibold">
-                        {formatVND(item.value)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{item.period}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Suggested Events */}
-              {timelineUpgradeAnalysis.suggestedEvents.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5" />
-                    AI Suggested Events ({timelineUpgradeAnalysis.suggestedEvents.length})
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {timelineUpgradeAnalysis.suggestedEvents.slice(0, 4).map((event, index) => {
-                      console.log('Suggested event:', event);
-                      return (
-                        <Card key={index} className="border-amber-200 bg-amber-50">
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-3">
-                            <div className="p-1 bg-amber-100 rounded">
-                              {getEventTypeIcon(event.type)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">{event.type}</div>
-                              <div className="text-xs text-muted-foreground">{event.reasoning}</div>
-                              <div className="text-xs text-green-600 mt-1">
-                                💰 Tiết kiệm: {formatVND(event.estimatedImpact?.totalSavings)}
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              T{event.suggestedMonth}
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Upgrade CTA */}
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="font-semibold">
-                    {timelineUpgradeAnalysis.shouldUpgrade ? 
-                      "✅ Khuyến nghị nâng cấp Timeline Mode" : 
-                      "ℹ️ Timeline Mode có sẵn"}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Phân tích 240 tháng với events tự động và tối ưu hóa AI
-                  </div>
-                </div>
-                <Button 
-                  onClick={onTimelineUpgrade}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                  size="lg"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Nâng cấp Timeline
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Risk Analysis (Existing) */}
         {activeSection === "risk" && (
