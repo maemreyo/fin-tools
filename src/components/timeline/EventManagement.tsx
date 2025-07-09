@@ -1,23 +1,28 @@
-/**
- * EVENT MANAGEMENT UI COMPONENTS
- * Forms và interfaces for creating, editing, and managing timeline events
- */
-
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-
+import React, { useState, useMemo, useCallback } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -25,118 +30,35 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
+import { toast } from "sonner";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
+  Calendar,
   Plus,
   Edit,
   Trash2,
   Copy,
   AlertTriangle,
   CheckCircle,
-  Calendar,
   DollarSign,
-  Percent,
-  Clock,
-  Info,
-  Lightbulb,
-  Wand2
-} from 'lucide-react';
+  TrendingUp,
+  Zap,
+  Shield,
+  Target,
+  BookOpen,
+  Wand2,
+  X,
+  Save,
+} from "lucide-react";
 
+import { RealEstateInputs } from "@/types/real-estate";
+import { TimelineEvent, TimelineEventType } from "@/types/timeline";
 import {
-  TimelineEvent,
-  TimelineEventType,
-  CashPaymentEvent,
-  LoanDisbursementEvent,
-  EarlyPaymentEvent,
-  InterestRateChangeEvent,
-  CashFlowUpdateEvent
-} from '@/types/timeline';
-import { RealEstateInputs } from '@/types/real-estate';
-import { 
-  EVENT_TYPE_CONFIG, 
-  EVENT_TEMPLATES, 
-  getEventTemplate,
+  EVENT_TYPE_CONFIG,
+  EVENT_TEMPLATES,
   getMonthDisplayName,
-  monthToYearMonth 
-} from '@/lib/timeline-constants';
-import { TimelineValidator } from '@/lib/timeline-validation';
-import { formatVND, parseVND } from '@/lib/financial-utils';
-
-// ===== VALIDATION SCHEMAS =====
-
-const baseEventSchema = z.object({
-  name: z.string().min(1, 'Tên sự kiện không được để trống'),
-  description: z.string().optional(),
-  month: z.number().min(1, 'Tháng phải từ 1').max(240, 'Tháng không được vượt quá 240'),
-  isActive: z.boolean().default(true),
-});
-
-const cashPaymentSchema = baseEventSchema.extend({
-  type: z.literal(TimelineEventType.CASH_PAYMENT),
-  amount: z.number().min(1000000, 'Số tiền tối thiểu 1 triệu VND'),
-  purpose: z.enum(['down_payment', 'renovation', 'fees', 'other']),
-  affectsCashFlow: z.boolean().default(false),
-});
-
-const loanDisbursementSchema = baseEventSchema.extend({
-  type: z.literal(TimelineEventType.LOAN_DISBURSEMENT),
-  amount: z.number().min(1000000, 'Số tiền vay tối thiểu 1 triệu VND'),
-  interestRate: z.number().min(0.1, 'Lãi suất tối thiểu 0.1%').max(50, 'Lãi suất tối đa 50%'),
-  gracePeriodMonths: z.number().min(0).max(60).optional(),
-});
-
-const earlyPaymentSchema = baseEventSchema.extend({
-  type: z.literal(TimelineEventType.EARLY_PAYMENT),
-  amount: z.number().min(1000000, 'Số tiền trả trước tối thiểu 1 triệu VND'),
-  penaltyRate: z.number().min(0, 'Phí phạt không được âm').max(10, 'Phí phạt tối đa 10%'),
-});
-
-const interestRateChangeSchema = baseEventSchema.extend({
-  type: z.literal(TimelineEventType.INTEREST_RATE_CHANGE),
-  newRate: z.number().min(0.1, 'Lãi suất tối thiểu 0.1%').max(50, 'Lãi suất tối đa 50%'),
-  oldRate: z.number().min(0.1).max(50),
-  reason: z.enum(['promotion_end', 'market_change', 'bank_policy', 'user_request']),
-});
-
-const cashFlowUpdateSchema = baseEventSchema.extend({
-  type: z.literal(TimelineEventType.CASH_FLOW_UPDATE),
-  incomeChange: z.number().default(0),
-  expenseChange: z.number().default(0),
-  rentalIncomeChange: z.number().default(0),
-  changeType: z.enum(['salary_increase', 'rent_increase', 'expense_increase', 'other']),
-  changePercent: z.number().min(-50, 'Giảm tối đa 50%').max(200, 'Tăng tối đa 200%'),
-});
+} from "@/lib/timeline-constants";
+import { TimelineValidator } from "@/lib/timeline-validation";
 
 // ===== COMPONENT INTERFACES =====
 
@@ -149,17 +71,20 @@ interface EventManagementProps {
   onEventDuplicate: (event: TimelineEvent) => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  mode?: 'BASIC' | 'ADVANCED';
+  mode?: "BASIC" | "ADVANCED";
   suggestedMonth?: number;
 }
 
-interface EventFormProps {
-  event?: TimelineEvent;
-  inputs: RealEstateInputs;
-  suggestedMonth?: number;
-  onSubmit: (event: TimelineEvent) => void;
-  onCancel: () => void;
-  mode?: 'BASIC' | 'ADVANCED';
+interface EventFormData {
+  type: TimelineEventType;
+  name: string;
+  description: string;
+  month: number;
+  amount?: number;
+  interestRate?: number;
+  newRate?: number;
+  reason?: string;
+  purpose?: string;
 }
 
 // ===== MAIN EVENT MANAGEMENT COMPONENT =====
@@ -173,31 +98,40 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   onEventDuplicate,
   isOpen = false,
   onOpenChange,
-  mode = 'BASIC',
-  suggestedMonth
+  mode = "BASIC",
+  suggestedMonth,
 }) => {
-  const [selectedEventType, setSelectedEventType] = useState<TimelineEventType | null>(null);
+  const [activeTab, setActiveTab] = useState<"create" | "manage" | "templates">(
+    "create"
+  );
+  const [selectedEventType, setSelectedEventType] =
+    useState<TimelineEventType | null>(null);
   const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
-  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'templates'>('create');
+  const [formData, setFormData] = useState<EventFormData>({
+    type: TimelineEventType.EARLY_PAYMENT,
+    name: "",
+    description: "",
+    month: suggestedMonth || 1,
+    amount: 0,
+  });
 
   // Filter event types based on mode
   const availableEventTypes = useMemo(() => {
     const basicTypes = [
       TimelineEventType.CASH_PAYMENT,
       TimelineEventType.LOAN_DISBURSEMENT,
-      TimelineEventType.START_LOAN_PAYMENTS,
       TimelineEventType.EARLY_PAYMENT,
-      TimelineEventType.INTEREST_RATE_CHANGE
+      TimelineEventType.INTEREST_RATE_CHANGE,
     ];
 
     const advancedTypes = [
       TimelineEventType.PRINCIPAL_GRACE_PERIOD,
       TimelineEventType.PHASED_DISBURSEMENT,
       TimelineEventType.CASH_FLOW_UPDATE,
-      TimelineEventType.PAYMENT_FEE_SCHEDULE
+      TimelineEventType.PAYMENT_FEE_SCHEDULE,
     ];
 
-    return mode === 'BASIC' ? basicTypes : [...basicTypes, ...advancedTypes];
+    return mode === "BASIC" ? basicTypes : [...basicTypes, ...advancedTypes];
   }, [mode]);
 
   // Validate events
@@ -206,180 +140,157 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     return validator.validate(events, inputs);
   }, [events, inputs]);
 
-  const handleEventSubmit = (event: TimelineEvent) => {
-    if (editingEvent) {
-      onEventUpdate({ ...event, id: editingEvent.id });
-      setEditingEvent(null);
-    } else {
-      onEventCreate({
-        ...event,
-        id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date()
+  // ===== EVENT HANDLERS =====
+
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (
+        !formData.name ||
+        !formData.type ||
+        formData.month < 1 ||
+        formData.month > 240
+      ) {
+        toast.error("Vui lòng nhập đầy đủ thông tin hợp lệ");
+        return;
+      }
+
+      const newEvent: TimelineEvent = {
+        id:
+          editingEvent?.id ||
+          `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: formData.type,
+        name: formData.name,
+        description: formData.description,
+        month: formData.month,
+        isActive: true,
+        createdAt: editingEvent?.createdAt || new Date(),
+        // Add type-specific fields
+        ...(formData.amount && { amount: formData.amount }),
+        ...(formData.interestRate && { interestRate: formData.interestRate }),
+        ...(formData.newRate && { newRate: formData.newRate }),
+        ...(formData.reason && { reason: formData.reason }),
+        ...(formData.purpose && { purpose: formData.purpose }),
+      } as TimelineEvent;
+
+      if (editingEvent) {
+        onEventUpdate(newEvent);
+        toast.success("Sự kiện đã được cập nhật");
+      } else {
+        onEventCreate(newEvent);
+        toast.success("Sự kiện đã được tạo");
+      }
+
+      // Reset form
+      setFormData({
+        type: TimelineEventType.EARLY_PAYMENT,
+        name: "",
+        description: "",
+        month: suggestedMonth || 1,
+        amount: 0,
       });
-    }
-    setSelectedEventType(null);
-  };
+      setEditingEvent(null);
+      setSelectedEventType(null);
+      setActiveTab("manage");
+    },
+    [formData, editingEvent, onEventCreate, onEventUpdate, suggestedMonth]
+  );
 
-  const handleEventEdit = (event: TimelineEvent) => {
+  const handleEventEdit = useCallback((event: TimelineEvent) => {
     setEditingEvent(event);
+    setFormData({
+      type: event.type,
+      name: event.name,
+      description: event.description || "",
+      month: event.month,
+      amount: (event as any).amount || 0,
+      interestRate: (event as any).interestRate || 0,
+      newRate: (event as any).newRate || 0,
+      reason: (event as any).reason || "",
+      purpose: (event as any).purpose || "",
+    });
     setSelectedEventType(event.type);
-    setActiveTab('create');
-  };
+    setActiveTab("create");
+  }, []);
 
-  const handleEventCancel = () => {
+  const handleEventCancel = useCallback(() => {
     setEditingEvent(null);
     setSelectedEventType(null);
-  };
-
-  const handleTemplateSelect = (template: any) => {
-    const newEvent: Partial<TimelineEvent> = {
-      ...template.defaultValues,
+    setFormData({
+      type: TimelineEventType.EARLY_PAYMENT,
+      name: "",
+      description: "",
       month: suggestedMonth || 1,
-      name: template.name,
-      description: template.description
-    };
-    
-    setSelectedEventType(template.type);
-    // Pre-fill form with template data
-  };
+      amount: 0,
+    });
+  }, [suggestedMonth]);
 
-  return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[600px] sm:w-[800px] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Quản Lý Sự Kiện Timeline
-            <Badge variant={mode === 'BASIC' ? 'default' : 'secondary'}>
-              {mode === 'BASIC' ? 'Cơ bản' : 'Nâng cao'}
-            </Badge>
-          </SheetTitle>
-          <SheetDescription>
-            {mode === 'BASIC' 
-              ? 'Tạo và quản lý các sự kiện cơ bản cho timeline đầu tư'
-              : 'Quản lý toàn bộ sự kiện và tối ưu hóa timeline'
-            }
-          </SheetDescription>
-        </SheetHeader>
-
-        {/* Validation Summary */}
-        {validation.errors.length > 0 && (
-          <Alert className="mt-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Có {validation.errors.length} lỗi và {validation.warnings.length} cảnh báo cần xử lý
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Tabs value={activeTab} onValueChange={(tab) => setActiveTab(tab as any)} className="mt-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="create">
-              {editingEvent ? 'Chỉnh sửa' : 'Tạo mới'}
-            </TabsTrigger>
-            <TabsTrigger value="manage">Quản lý ({events.length})</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-          </TabsList>
-
-          {/* CREATE/EDIT TAB */}
-          <TabsContent value="create" className="space-y-4">
-            {!selectedEventType ? (
-              <EventTypeSelector
-                availableTypes={availableEventTypes}
-                onSelect={setSelectedEventType}
-                mode={mode}
-              />
-            ) : (
-              <EventForm
-                event={editingEvent || undefined}
-                inputs={inputs}
-                suggestedMonth={suggestedMonth}
-                onSubmit={handleEventSubmit}
-                onCancel={handleEventCancel}
-                mode={mode}
-              />
-            )}
-          </TabsContent>
-
-          {/* MANAGE TAB */}
-          <TabsContent value="manage" className="space-y-4">
-            <EventList
-              events={events}
-              validation={validation}
-              onEdit={handleEventEdit}
-              onDelete={onEventDelete}
-              onDuplicate={onEventDuplicate}
-            />
-          </TabsContent>
-
-          {/* TEMPLATES TAB */}
-          <TabsContent value="templates" className="space-y-4">
-            <EventTemplates
-              templates={EVENT_TEMPLATES.filter(t => 
-                mode === 'BASIC' ? t.category === 'BASIC' : true
-              )}
-              onSelect={handleTemplateSelect}
-            />
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+  const handleTemplateSelect = useCallback(
+    (template: any) => {
+      setFormData({
+        type: template.type,
+        name: template.name,
+        description: template.description,
+        month: suggestedMonth || 1,
+        amount: template.defaultValues.amount || 0,
+        interestRate: template.defaultValues.interestRate || 0,
+        newRate: template.defaultValues.newRate || 0,
+        reason: template.defaultValues.reason || "",
+        purpose: template.defaultValues.purpose || "",
+      });
+      setSelectedEventType(template.type);
+      setActiveTab("create");
+    },
+    [suggestedMonth]
   );
-};
 
-// ===== EVENT TYPE SELECTOR =====
+  // ===== RENDER METHODS =====
 
-interface EventTypeSelectorProps {
-  availableTypes: TimelineEventType[];
-  onSelect: (type: TimelineEventType) => void;
-  mode: 'BASIC' | 'ADVANCED';
-}
-
-const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
-  availableTypes,
-  onSelect,
-  mode
-}) => {
-  return (
+  const renderEventTypeSelector = () => (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">Chọn loại sự kiện</h3>
         <p className="text-sm text-muted-foreground">
-          {mode === 'BASIC' 
-            ? 'Các sự kiện cơ bản phù hợp cho người mới bắt đầu'
-            : 'Toàn bộ sự kiện timeline cho phân tích chuyên sâu'
-          }
+          {mode === "BASIC"
+            ? "Các sự kiện cơ bản phù hợp cho người mới bắt đầu"
+            : "Tất cả các loại sự kiện để tối ưu hóa timeline"}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {availableTypes.map(type => {
-          const config = EVENT_TYPE_CONFIG[type];
+        {availableEventTypes.map((eventType) => {
+          const config = EVENT_TYPE_CONFIG[eventType];
           return (
             <Card
-              key={type}
+              key={eventType}
               className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
-              onClick={() => onSelect(type)}
+              onClick={() => {
+                setSelectedEventType(eventType);
+                setFormData((prev) => ({ ...prev, type: eventType }));
+              }}
             >
               <CardContent className="p-4">
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-lg"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
                     style={{ backgroundColor: config.color }}
                   >
                     {config.icon}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold">{config.description}</h4>
-                      <Badge variant={config.category === 'BASIC' ? 'default' : 'secondary'}>
-                        {config.category}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {config.tooltip}
+                    <h4 className="font-semibold">{config.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {config.description}
                     </p>
                   </div>
+                  <Badge
+                    variant={
+                      config.category === "BASIC" ? "default" : "secondary"
+                    }
+                  >
+                    {config.category}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -388,281 +299,299 @@ const EventTypeSelector: React.FC<EventTypeSelectorProps> = ({
       </div>
     </div>
   );
-};
 
-// ===== EVENT FORM =====
-
-const EventForm: React.FC<EventFormProps> = ({
-  event,
-  inputs,
-  suggestedMonth,
-  onSubmit,
-  onCancel,
-  mode
-}) => {
-  const [eventType] = useState<TimelineEventType>(
-    event?.type || TimelineEventType.CASH_PAYMENT
-  );
-
-  const form = useForm({
-    resolver: zodResolver(getSchemaForEventType(eventType)),
-    defaultValues: getDefaultValues(event, eventType, suggestedMonth),
-  });
-
-  const config = EVENT_TYPE_CONFIG[eventType];
-
-  const handleSubmit = (data: any) => {
-    const eventData: TimelineEvent = {
-      ...data,
-      type: eventType,
-      id: event?.id || '',
-      createdAt: event?.createdAt || new Date(),
-      isActive: data.isActive ?? true,
-    };
-    onSubmit(eventData);
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Event Type Header */}
-      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+  const renderEventForm = () => (
+    <form onSubmit={handleFormSubmit} className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
         <div
-          className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl"
-          style={{ backgroundColor: config.color }}
+          className="w-8 h-8 rounded flex items-center justify-center text-white"
+          style={{ backgroundColor: EVENT_TYPE_CONFIG[formData.type].color }}
         >
-          {config.icon}
+          {EVENT_TYPE_CONFIG[formData.type].icon}
         </div>
         <div>
-          <h3 className="font-semibold">{config.description}</h3>
-          <p className="text-sm text-muted-foreground">{config.tooltip}</p>
+          <h3 className="font-semibold">
+            {EVENT_TYPE_CONFIG[formData.type].name}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {editingEvent ? "Chỉnh sửa sự kiện" : "Tạo sự kiện mới"}
+          </p>
         </div>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          {/* Basic Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tên sự kiện *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nhập tên sự kiện" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      {/* Basic Fields */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Tên sự kiện *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            placeholder="Nhập tên sự kiện"
+            required
+          />
+        </div>
 
-            <FormField
-              control={form.control}
-              name="month"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tháng thực hiện *</FormLabel>
-                  <FormControl>
-                    <div className="space-y-2">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={240}
-                        placeholder="1-240"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {field.value && getMonthDisplayName(field.value)}
-                      </p>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <div>
+          <Label htmlFor="description">Mô tả</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
+            placeholder="Mô tả chi tiết về sự kiện"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="month">Tháng thực hiện *</Label>
+          <Input
+            id="month"
+            type="number"
+            value={formData.month}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                month: parseInt(e.target.value) || 1,
+              }))
+            }
+            min="1"
+            max="240"
+            required
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Tháng 1-240 (20 năm timeline)
+          </p>
+        </div>
+
+        {/* Type-specific fields */}
+        {(formData.type === TimelineEventType.EARLY_PAYMENT ||
+          formData.type === TimelineEventType.CASH_PAYMENT) && (
+          <div>
+            <Label htmlFor="amount">Số tiền (VND) *</Label>
+            <Input
+              id="amount"
+              type="number"
+              value={formData.amount}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  amount: parseInt(e.target.value) || 0,
+                }))
+              }
+              min="0"
+              step="1000000"
+              required
             />
           </div>
+        )}
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mô tả (tùy chọn)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Mô tả chi tiết về sự kiện này"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Event-specific Fields */}
-          {renderEventSpecificFields(eventType, form, inputs)}
-
-          {/* Actions */}
-          <div className="flex justify-between pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-            >
-              Hủy
-            </Button>
-            <div className="flex gap-2">
-              {event && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    // Duplicate functionality
-                    const duplicated = { ...event };
-                    delete (duplicated as any).id;
-                    duplicated.name = `${duplicated.name} (Copy)`;
-                    duplicated.month = Math.min(240, duplicated.month + 1);
-                    onSubmit(duplicated);
-                  }}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Nhân bản
-                </Button>
-              )}
-              <Button type="submit">
-                {event ? 'Cập nhật' : 'Tạo sự kiện'}
-              </Button>
+        {formData.type === TimelineEventType.INTEREST_RATE_CHANGE && (
+          <div className="space-y-2">
+            <div>
+              <Label htmlFor="newRate">Lãi suất mới (%/năm) *</Label>
+              <Input
+                id="newRate"
+                type="number"
+                value={formData.newRate}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    newRate: parseFloat(e.target.value) || 0,
+                  }))
+                }
+                min="0"
+                max="50"
+                step="0.1"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="reason">Lý do thay đổi</Label>
+              <Select
+                value={formData.reason}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, reason: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn lý do" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="promotion_end">Kết thúc ưu đãi</SelectItem>
+                  <SelectItem value="market_change">
+                    Thay đổi thị trường
+                  </SelectItem>
+                  <SelectItem value="bank_policy">
+                    Chính sách ngân hàng
+                  </SelectItem>
+                  <SelectItem value="user_request">
+                    Yêu cầu khách hàng
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </form>
-      </Form>
-    </div>
-  );
-};
+        )}
 
-// ===== EVENT LIST =====
-
-interface EventListProps {
-  events: TimelineEvent[];
-  validation: any;
-  onEdit: (event: TimelineEvent) => void;
-  onDelete: (eventId: string) => void;
-  onDuplicate: (event: TimelineEvent) => void;
-}
-
-const EventList: React.FC<EventListProps> = ({
-  events,
-  validation,
-  onEdit,
-  onDelete,
-  onDuplicate
-}) => {
-  const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => a.month - b.month);
-  }, [events]);
-
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold">Chưa có sự kiện nào</h3>
-        <p className="text-muted-foreground">
-          Bắt đầu bằng cách tạo sự kiện đầu tiên cho timeline
-        </p>
+        {formData.type === TimelineEventType.CASH_PAYMENT && (
+          <div>
+            <Label htmlFor="purpose">Mục đích thanh toán</Label>
+            <Select
+              value={formData.purpose}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, purpose: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn mục đích" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="down_payment">Thanh toán trước</SelectItem>
+                <SelectItem value="renovation">Cải tạo</SelectItem>
+                <SelectItem value="fees">Phí dịch vụ</SelectItem>
+                <SelectItem value="other">Khác</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-3">
-      {sortedEvents.map(event => {
-        const config = EVENT_TYPE_CONFIG[event.type];
-        const hasError = validation.errors.some((error: any) =>
-          error.affectedEvents.includes(event.id)
-        );
-        const hasWarning = validation.warnings.some((warning: any) =>
-          warning.affectedMonths.includes(event.month)
-        );
+      {/* Form Actions */}
+      <div className="flex gap-2 pt-4">
+        <Button type="submit" className="flex-1">
+          <Save className="h-4 w-4 mr-2" />
+          {editingEvent ? "Cập nhật" : "Tạo sự kiện"}
+        </Button>
+        <Button type="button" variant="outline" onClick={handleEventCancel}>
+          <X className="h-4 w-4 mr-2" />
+          Hủy
+        </Button>
+      </div>
+    </form>
+  );
 
-        return (
-          <Card key={event.id} className={`${hasError ? 'border-red-200' : hasWarning ? 'border-yellow-200' : ''}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded flex items-center justify-center text-white text-sm"
-                    style={{ backgroundColor: config.color }}
-                  >
-                    {config.icon}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold">{event.name}</h4>
-                      <Badge variant="outline">
-                        {getMonthDisplayName(event.month)}
-                      </Badge>
-                      {hasError && (
-                        <Badge variant="destructive">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Lỗi
-                        </Badge>
-                      )}
-                      {hasWarning && !hasError && (
-                        <Badge variant="outline" className="border-yellow-400 text-yellow-600">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Cảnh báo
-                        </Badge>
-                      )}
+  const renderEventList = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">
+            Danh sách sự kiện ({events.length})
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Quản lý các sự kiện đã tạo trong timeline
+          </p>
+        </div>
+      </div>
+
+      {events.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">Chưa có sự kiện nào</h3>
+            <p className="text-sm text-muted-foreground">
+              Bắt đầu tạo sự kiện để xây dựng timeline
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {events.map((event) => {
+            const config = EVENT_TYPE_CONFIG[event.type];
+            const hasError = validation.errors.some((error) =>
+              error.affectedEvents.includes(event.id)
+            );
+            const hasWarning = validation.warnings.some((warning) =>
+              warning.affectedMonths.includes(event.month)
+            );
+
+            return (
+              <Card
+                key={event.id}
+                className={`${
+                  hasError
+                    ? "border-red-200"
+                    : hasWarning
+                    ? "border-yellow-200"
+                    : ""
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded flex items-center justify-center text-white text-sm"
+                        style={{ backgroundColor: config.color }}
+                      >
+                        {config.icon}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold">{event.name}</h4>
+                          <Badge variant="outline">
+                            {getMonthDisplayName(event.month)}
+                          </Badge>
+                          {hasError && (
+                            <Badge variant="destructive">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Lỗi
+                            </Badge>
+                          )}
+                          {hasWarning && !hasError && (
+                            <Badge
+                              variant="outline"
+                              className="border-yellow-400 text-yellow-600"
+                            >
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Cảnh báo
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {event.description || config.description}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {event.description || config.description}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEdit(event)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDuplicate(event)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(event.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEventEdit(event)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEventDuplicate(event)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEventDelete(event.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
-};
 
-// ===== EVENT TEMPLATES =====
-
-interface EventTemplatesProps {
-  templates: any[];
-  onSelect: (template: any) => void;
-}
-
-const EventTemplates: React.FC<EventTemplatesProps> = ({ templates, onSelect }) => {
-  return (
+  const renderTemplates = () => (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -675,13 +604,15 @@ const EventTemplates: React.FC<EventTemplatesProps> = ({ templates, onSelect }) 
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {templates.map(template => {
+        {EVENT_TEMPLATES.filter((template) =>
+          mode === "BASIC" ? template.category === "BASIC" : true
+        ).map((template) => {
           const config = EVENT_TYPE_CONFIG[template.type];
           return (
             <Card
               key={template.id}
               className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
-              onClick={() => onSelect(template)}
+              onClick={() => handleTemplateSelect(template)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -694,7 +625,13 @@ const EventTemplates: React.FC<EventTemplatesProps> = ({ templates, onSelect }) 
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h4 className="font-semibold">{template.name}</h4>
-                      <Badge variant={template.category === 'BASIC' ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={
+                          template.category === "BASIC"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
                         {template.category}
                       </Badge>
                     </div>
@@ -713,258 +650,70 @@ const EventTemplates: React.FC<EventTemplatesProps> = ({ templates, onSelect }) 
       </div>
     </div>
   );
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-[600px] sm:w-[800px] overflow-y-auto"
+      >
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Quản Lý Sự Kiện Timeline
+            <Badge variant={mode === "BASIC" ? "default" : "secondary"}>
+              {mode === "BASIC" ? "Cơ bản" : "Nâng cao"}
+            </Badge>
+          </SheetTitle>
+          <SheetDescription>
+            {mode === "BASIC"
+              ? "Tạo và quản lý các sự kiện cơ bản cho timeline đầu tư"
+              : "Quản lý toàn bộ sự kiện và tối ưu hóa timeline"}
+          </SheetDescription>
+        </SheetHeader>
+
+        {/* Validation Summary */}
+        {validation.errors.length > 0 && (
+          <Alert className="mt-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Có {validation.errors.length} lỗi và {validation.warnings.length}{" "}
+              cảnh báo cần xử lý
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(tab) => setActiveTab(tab as any)}
+          className="mt-6"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="create">
+              {editingEvent ? "Chỉnh sửa" : "Tạo mới"}
+            </TabsTrigger>
+            <TabsTrigger value="manage">Quản lý ({events.length})</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+          </TabsList>
+
+          {/* CREATE/EDIT TAB */}
+          <TabsContent value="create" className="space-y-4">
+            {!selectedEventType ? renderEventTypeSelector() : renderEventForm()}
+          </TabsContent>
+
+          {/* MANAGE TAB */}
+          <TabsContent value="manage" className="space-y-4">
+            {renderEventList()}
+          </TabsContent>
+
+          {/* TEMPLATES TAB */}
+          <TabsContent value="templates" className="space-y-4">
+            {renderTemplates()}
+          </TabsContent>
+        </Tabs>
+      </SheetContent>
+    </Sheet>
+  );
 };
-
-// ===== HELPER FUNCTIONS =====
-
-function getSchemaForEventType(type: TimelineEventType) {
-  switch (type) {
-    case TimelineEventType.CASH_PAYMENT:
-      return cashPaymentSchema;
-    case TimelineEventType.LOAN_DISBURSEMENT:
-      return loanDisbursementSchema;
-    case TimelineEventType.EARLY_PAYMENT:
-      return earlyPaymentSchema;
-    case TimelineEventType.INTEREST_RATE_CHANGE:
-      return interestRateChangeSchema;
-    case TimelineEventType.CASH_FLOW_UPDATE:
-      return cashFlowUpdateSchema;
-    default:
-      return baseEventSchema;
-  }
-}
-
-function getDefaultValues(
-  event: TimelineEvent | undefined,
-  type: TimelineEventType,
-  suggestedMonth?: number
-) {
-  if (event) return event;
-
-  const config = EVENT_TYPE_CONFIG[type];
-  return {
-    name: config.description,
-    description: '',
-    month: suggestedMonth || 1,
-    isActive: true,
-    type,
-  };
-}
-
-function renderEventSpecificFields(
-  eventType: TimelineEventType,
-  form: any,
-  inputs: RealEstateInputs
-) {
-  switch (eventType) {
-    case TimelineEventType.CASH_PAYMENT:
-      return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Số tiền (VND) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1000000}
-                      step={1000000}
-                      placeholder="1,000,000"
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="purpose"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mục đích *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn mục đích" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="down_payment">Thanh toán trước</SelectItem>
-                      <SelectItem value="renovation">Sửa chữa, trang trí</SelectItem>
-                      <SelectItem value="fees">Phí, thuế</SelectItem>
-                      <SelectItem value="other">Khác</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="affectsCashFlow"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">
-                    Ảnh hưởng dòng tiền hàng tháng
-                  </FormLabel>
-                  <FormDescription>
-                    Kích hoạt nếu đây là chi phí định kỳ hàng tháng
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-      );
-
-    case TimelineEventType.LOAN_DISBURSEMENT:
-      return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Số tiền giải ngân (VND) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1000000}
-                      step={1000000}
-                      placeholder="2,000,000,000"
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Tối đa: {formatVND(inputs.giaTriBDS * (inputs.tyLeVay / 100))}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="interestRate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lãi suất (%/năm) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0.1}
-                      max={50}
-                      step={0.1}
-                      placeholder="8.0"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="gracePeriodMonths"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Thời gian ân hạn (tháng)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={60}
-                    placeholder="0"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Số tháng chỉ trả lãi, không trả gốc (0 = không ân hạn)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      );
-
-    case TimelineEventType.EARLY_PAYMENT:
-      return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Số tiền trả trước (VND) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1000000}
-                      step={1000000}
-                      placeholder="500,000,000"
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="penaltyRate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phí phạt (%)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={10}
-                      step={0.1}
-                      placeholder="1.0"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Phí phạt trả nợ trước hạn (0-10%)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      );
-
-    default:
-      return null;
-  }
-}
 
 export default EventManagement;
