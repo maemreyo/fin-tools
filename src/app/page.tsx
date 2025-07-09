@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calculator, Lightbulb, Loader2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calculator, Lightbulb, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { CalculationConfirmationDialog } from "@/components/CalculationConfirmationDialog";
@@ -96,21 +97,6 @@ export default function EnhancedRealEstateCalculatorPage() {
         />
 
         <div className="space-y-8">
-          {showPresets && (
-            <PresetScenarios
-              scenarios={PRESET_SCENARIOS}
-              selectedPreset={appState.selectedPreset}
-              onPresetSelect={handlePresetSelectWithToast}
-              onHide={() => setShowPresets(false)}
-            />
-          )}
-
-          <CalculationHistory
-            history={appState.calculationHistory}
-            onResultSelect={handleResultSelect}
-            onToggleComparison={() => setShowComparison(!showComparison)}
-          />
-
           <div data-form="property-input">
             <PropertyInputForm
               onCalculate={handleCalculateWithConfirm}
@@ -119,6 +105,36 @@ export default function EnhancedRealEstateCalculatorPage() {
               isLoading={appState.isCalculating}
             />
           </div>
+
+          <Collapsible open={showPresets} onOpenChange={setShowPresets}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4" />
+                  {showPresets ? "Ẩn các mẫu có sẵn và lịch sử" : "Hiện các mẫu có sẵn và lịch sử"}
+                </span>
+                {showPresets ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-8 mt-4">
+              <PresetScenarios
+                scenarios={PRESET_SCENARIOS}
+                selectedPreset={appState.selectedPreset}
+                onPresetSelect={handlePresetSelectWithToast}
+                onHide={() => setShowPresets(false)}
+              />
+
+              <CalculationHistory
+                history={appState.calculationHistory}
+                onResultSelect={handleResultSelect}
+                onToggleComparison={() => setShowComparison(!showComparison)}
+              />
+            </CollapsibleContent>
+          </Collapsible>
 
           {showComparison && appState.calculationHistory.length > 1 && (
             <ScenarioComparison
