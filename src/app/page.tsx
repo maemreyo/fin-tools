@@ -50,6 +50,7 @@ import {
   Rocket,
   Target,
   Clock,
+  Shield,
 } from "lucide-react";
 
 import PropertyInputForm from "@/components/PropertyInputForm";
@@ -490,8 +491,9 @@ export default function EnhancedRealEstateCalculatorPage() {
             )}
 
             {/* ===== MAIN CALCULATION FORM ===== */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+              {/* Main Form - Takes up more space */}
+              <div className="xl:col-span-3">
                 <PropertyInputForm
                   onCalculate={handleCalculateWithConfirm}
                   isLoading={appState.isCalculating}
@@ -500,24 +502,59 @@ export default function EnhancedRealEstateCalculatorPage() {
                 />
               </div>
 
-              <div className="space-y-6">
-                {/* Quick Stats */}
+              {/* Compact Sidebar */}
+              <div className="xl:col-span-1 space-y-4">
+                {/* Quick Actions */}
+                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-blue-600" />
+                      Thao Tác Nhanh
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start text-xs"
+                      onClick={() => setShowComparison(hasCalculationHistory)}
+                      disabled={!hasCalculationHistory}
+                    >
+                      <BarChart3 className="h-3 w-3 mr-2" />
+                      So sánh kịch bản
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start text-xs"
+                      onClick={handleSwitchToTimeline}
+                    >
+                      <Calendar className="h-3 w-3 mr-2" />
+                      Timeline Mode
+                      <Badge className="ml-auto bg-purple-100 text-purple-700 text-xs">
+                        Pro
+                      </Badge>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Calculation History - Compact */}
                 {hasCalculationHistory && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <History className="h-5 w-5" />
-                        Lịch Sử Tính Toán
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <History className="h-4 w-4 text-green-600" />
+                        Lịch Sử
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {appState.calculationHistory
                           .slice(0, 3)
                           .map((calc, index) => (
                             <div
                               key={calc.calculationId || index}
-                              className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                              className="p-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md cursor-pointer hover:from-blue-50 hover:to-blue-100 transition-all duration-200 border border-gray-200 hover:border-blue-300"
                               onClick={() => {
                                 setAppState((prev) => ({
                                   ...prev,
@@ -526,20 +563,23 @@ export default function EnhancedRealEstateCalculatorPage() {
                                 }));
                               }}
                             >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="text-sm font-medium">
+                              <div className="flex justify-between items-center">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-semibold text-gray-900 truncate">
                                     {calc.inputs.giaTriBDS
                                       ? `${(
                                           calc.inputs.giaTriBDS / 1000000000
-                                        ).toFixed(1)}B VND`
+                                        ).toFixed(1)}B`
                                       : "N/A"}
                                   </div>
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-gray-500 truncate">
                                     {calc.calculatedAt
                                       ? new Date(
                                           calc.calculatedAt
-                                        ).toLocaleDateString("vi-VN")
+                                        ).toLocaleDateString("vi-VN", {
+                                          month: "short",
+                                          day: "numeric",
+                                        })
                                       : "N/A"}
                                   </div>
                                 </div>
@@ -549,73 +589,114 @@ export default function EnhancedRealEstateCalculatorPage() {
                                       ? "default"
                                       : "destructive"
                                   }
-                                  className="text-xs"
+                                  className="text-xs ml-2 shrink-0"
                                 >
-                                  {(calc.roiHangNam || 0).toFixed(1)}% ROI
+                                  {(calc.roiHangNam || 0).toFixed(1)}%
                                 </Badge>
                               </div>
                             </div>
                           ))}
                       </div>
-
-                      {hasCalculationHistory && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full mt-3"
-                          onClick={() => setShowComparison(true)}
-                        >
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          So sánh kịch bản
-                        </Button>
-                      )}
                     </CardContent>
                   </Card>
                 )}
 
-                {/* AI Advisory */}
-                {currentCalculation && (
-                  <AIAdvisorySystem
-                    result={currentCalculation}
-                    onTimelineUpgrade={handleUpgradeToTimeline}
-                  />
-                )}
-
-                {/* Feature Highlights */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5" />
-                      Tính Năng Nổi Bật
+                {/* Feature Highlights - Compact */}
+                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-emerald-600" />
+                      Tính Năng
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span>Tính toán ROI chính xác</span>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />
+                        <span className="text-emerald-800">ROI chính xác</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span>Phân tích dòng tiền chi tiết</span>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />
+                        <span className="text-emerald-800">
+                          Dòng tiền chi tiết
+                        </span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span>Cảnh báo rủi ro thông minh</span>
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-3 w-3 text-blue-600 shrink-0" />
+                        <span className="text-blue-800">Cảnh báo rủi ro</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Zap className="h-4 w-4 text-blue-500" />
-                        <span>AI Advisory System</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Rocket className="h-4 w-4 text-purple-500" />
-                        <span>Timeline Mode (Pro)</span>
+                      <div className="flex items-center gap-2">
+                        <Brain className="h-3 w-3 text-purple-600 shrink-0" />
+                        <span className="text-purple-800">AI Advisory</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Quick Stats */}
+                {currentCalculation && (
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Target className="h-4 w-4 text-blue-600" />
+                        Tóm Tắt
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-center">
+                        <div className="text-xs text-blue-600 mb-1">
+                          Dòng tiền/tháng
+                        </div>
+                        <div
+                          className={`text-lg font-bold ${
+                            (currentCalculation.steps?.dongTienRongBDS || 0) > 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {(
+                            (currentCalculation.steps?.dongTienRongBDS || 0) /
+                            1000000
+                          ).toFixed(1)}
+                          M
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs text-blue-600 mb-1">
+                          ROI năm
+                        </div>
+                        <div
+                          className={`text-lg font-bold ${
+                            (currentCalculation.roiHangNam || 0) > 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {(currentCalculation.roiHangNam || 0).toFixed(1)}%
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
+            {/* AI Advisory - Compact */}
+            {/* {currentCalculation && (
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-purple-600" />
+                    AI Advisor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AIAdvisorySystem
+                    result={currentCalculation}
+                    onTimelineUpgrade={handleUpgradeToTimeline}
+                  />
+                </CardContent>
+              </Card>
+            )} */}
           </div>
         )}
 
