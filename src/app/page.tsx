@@ -252,6 +252,8 @@ export default function EnhancedRealEstateCalculatorPage() {
   // UI State
   const [showPresets, setShowPresets] = useState(true);
   const [showComparison, setShowComparison] = useState(false);
+  const [showCalculationConfirm, setShowCalculationConfirm] = useState(false);
+  const [pendingCalculation, setPendingCalculation] = useState<RealEstateInputs | null>(null);
 
   // ===== LOAD SAVED DATA =====
   useEffect(() => {
@@ -278,6 +280,11 @@ export default function EnhancedRealEstateCalculatorPage() {
   }, []);
 
   // ===== CALCULATION HANDLERS =====
+  const handleCalculateWithConfirm = useCallback((inputs: RealEstateInputs) => {
+    setPendingCalculation(inputs);
+    setShowCalculationConfirm(true);
+  }, []);
+
   const handleCalculate = useCallback(
     async (inputs: RealEstateInputs) => {
       setAppState((prev) => ({ ...prev, isCalculating: true }));
@@ -392,13 +399,40 @@ export default function EnhancedRealEstateCalculatorPage() {
 
   // ===== PRESET HANDLERS =====
   const handlePresetSelect = useCallback((preset: PresetScenario) => {
-    setAppState((prev) => ({ ...prev, selectedPreset: preset }));
+    setAppState((prev) => ({ 
+      ...prev, 
+      selectedPreset: preset,
+      viewState: "INPUT" // Ensure we're in input view
+    }));
     setShowPresets(false);
 
-    toast.success("Đã chọn mẫu", {
-      description: preset.name,
+    // Enhanced toast with action buttons
+    toast.success("✅ Đã tải template thành công!", {
+      description: `${preset.name} - Dữ liệu đã được điền vào form`,
+      action: {
+        label: "Tính toán ngay",
+        onClick: () => {
+          // Auto-calculate if user wants
+          if (preset.inputs) {
+            handleCalculate(preset.inputs as RealEstateInputs);
+          }
+        },
+      },
+      duration: 5000,
     });
-  }, []);
+
+    // Smooth scroll to form
+    setTimeout(() => {
+      const formElement = document.querySelector('[data-form="property-input"]');
+      if (formElement) {
+        formElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest' 
+        });
+      }
+    }, 100);
+  }, [handleCalculate]);
 
   // ===== UPGRADE TO TIMELINE =====
   const renderTimelineUpgradeCard = useMemo(() => {
@@ -617,28 +651,70 @@ export default function EnhancedRealEstateCalculatorPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {PRESET_SCENARIOS.map((preset) => (
                       <Card
                         key={preset.id}
-                        className="cursor-pointer hover:shadow-md transition-all border-amber-200 hover:border-amber-300 bg-white"
+                        className={`cursor-pointer hover:shadow-lg transition-all duration-200 bg-white group ${
+                          appState.selectedPreset?.id === preset.id 
+                            ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' 
+                            : 'border-amber-200 hover:border-amber-400'
+                        }`}
                         onClick={() => handlePresetSelect(preset)}
                       >
                         <CardContent className="p-4">
                           <div className="space-y-3">
-                            <div>
-                              <h3 className="font-semibold text-sm">
-                                {preset.name}
-                              </h3>
-                              <p className="text-xs text-muted-foreground">
-                                {preset.description}
-                              </p>
+                            {/* Header */}
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-sm mb-1 group-hover:text-blue-600 transition-colors">
+                                  {preset.name}
+                                </h3>
+                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                  {preset.description}
+                                </p>
+                              </div>
+                              {appState.selectedPreset?.id === preset.id && (
+                                <CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0 ml-2" />
+                              )}
                             </div>
-                            <div className="flex items-center justify-between">
-                              <Badge variant="outline" className="text-xs">
-                                {preset.category}
-                              </Badge>
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+
+                            {/* Key Metrics Preview */}
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Giá BDS:</span>
+                                <span className="font-medium">
+                                  {(preset.inputs.giaTriBDS / 1000000000).toFixed(1)}B ₫
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Tiền thuê:</span>
+                                <span className="font-medium text-green-600">
+                                  {(preset.inputs.tienThueThang / 1000000).toFixed(0)}M ₫/tháng
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Vay:</span>
+                                <span className="font-medium">
+                                  {preset.inputs.tyLeVay}% - {preset.inputs.thoiGianVay} năm
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {preset.category}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {preset.location}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-blue-600 group-hover:text-blue-700">
+                                <span>Chọn</span>
+                                <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -750,11 +826,15 @@ export default function EnhancedRealEstateCalculatorPage() {
             )}
 
             {/* Main Input Form */}
-            <PropertyInputForm
-              onCalculate={handleCalculate}
-              initialValues={appState.selectedPreset?.inputs}
-              isLoading={appState.isCalculating}
-            />
+            <div data-form="property-input">
+              <PropertyInputForm
+                onCalculate={handleCalculateWithConfirm}
+                initialValues={appState.selectedPreset?.inputs}
+                selectedPreset={appState.selectedPreset}
+                isLoading={appState.isCalculating}
+                mode={appState.mode}
+              />
+            </div>
 
             {/* Results Section */}
             {appState.currentResult && appState.viewState === "RESULTS" && (
@@ -828,6 +908,96 @@ export default function EnhancedRealEstateCalculatorPage() {
           </div>
         )}
       </div>
+
+      {/* ===== CALCULATION CONFIRMATION DIALOG ===== */}
+      <Dialog open={showCalculationConfirm} onOpenChange={setShowCalculationConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-blue-600" />
+              Xác nhận tính toán
+            </DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn thực hiện phân tích đầu tư bất động sản này không?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {pendingCalculation && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <h4 className="font-semibold text-sm">Thông tin sẽ được phân tích:</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Giá BDS:</span>
+                    <span className="ml-2 font-medium">
+                      {(pendingCalculation.giaTriBDS / 1000000000).toFixed(1)}B ₫
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Tiền thuê:</span>
+                    <span className="ml-2 font-medium text-green-600">
+                      {(pendingCalculation.tienThueThang / 1000000).toFixed(0)}M ₫/tháng
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Vay:</span>
+                    <span className="ml-2 font-medium">
+                      {pendingCalculation.tyLeVay}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Thời gian:</span>
+                    <span className="ml-2 font-medium">
+                      {pendingCalculation.thoiGianVay} năm
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Alert className="border-blue-200 bg-blue-50">
+                <Lightbulb className="h-4 w-4" />
+                <AlertDescription className="text-blue-800">
+                  <strong>Miễn phí:</strong> Tính toán này hoàn toàn miễn phí và không giới hạn số lần sử dụng.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCalculationConfirm(false);
+                    setPendingCalculation(null);
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (pendingCalculation) {
+                      handleCalculate(pendingCalculation);
+                    }
+                    setShowCalculationConfirm(false);
+                    setPendingCalculation(null);
+                  }}
+                  disabled={appState.isCalculating}
+                >
+                  {appState.isCalculating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang tính toán...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="h-4 w-4 mr-2" />
+                      Bắt đầu phân tích
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
