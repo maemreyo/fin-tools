@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+// import { Progress } from "@/components/ui/progress"; // COMMENTED OUT
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -30,12 +30,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import {
   HelpCircle,
   Calculator,
@@ -52,14 +46,15 @@ import {
   ArrowDown,
   ArrowRight,
   Loader2,
-  Calendar as CalendarIcon,
   Rocket,
   Settings,
   Zap,
   Clock,
   BarChart3,
+  Home,
+  DollarSign,
+  Percent,
 } from "lucide-react";
-import { format } from "date-fns";
 
 import {
   RealEstateInputs,
@@ -70,7 +65,6 @@ import {
 import { formatVND, parseVND } from "@/lib/financial-utils";
 
 // ===== ENHANCED VALIDATION SCHEMA =====
-// Base schema for classic mode
 const baseRealEstateSchema = z.object({
   // Core user inputs - những gì user BIẾT
   giaTriBDS: z.number().min(1000000, "Vui lòng nhập giá trị bất động sản"),
@@ -101,7 +95,7 @@ interface EnhancedPropertyInputFormProps {
   onCalculate: (inputs: RealEstateInputs) => void;
   initialValues?: Partial<RealEstateInputs>;
   isLoading?: boolean;
-  selectedPreset?: PresetScenario | null; // 🆕 Selected preset to populate form
+  selectedPreset?: PresetScenario | null;
 }
 
 // ===== SMART CURRENCY INPUT COMPONENT =====
@@ -124,7 +118,6 @@ const SmartCurrencyInput: React.FC<{
     value ? formatVND(value) : ""
   );
 
-  // Update display value when value prop changes (for preset loading)
   React.useEffect(() => {
     if (value) {
       setDisplayValue(formatVND(value));
@@ -136,7 +129,6 @@ const SmartCurrencyInput: React.FC<{
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setDisplayValue(inputValue);
-
     const numericValue = parseVND(inputValue);
     onChange(numericValue);
   };
@@ -216,69 +208,6 @@ const PercentageInput: React.FC<{
   );
 };
 
-// ===== STEP INDICATOR COMPONENT =====
-const StepIndicator: React.FC<{
-  currentStep: number;
-  completedSteps: Set<number>;
-  onStepClick: (step: number) => void;
-}> = ({ currentStep, completedSteps, onStepClick }) => {
-  const steps = [
-    { id: 1, title: "Thông tin BĐS", description: "Giá trị & vốn tự có" },
-    { id: 2, title: "Thu nhập dự kiến", description: "Tiền thuê & setup" },
-    { id: 3, title: "Tài chính cá nhân", description: "Thu nhập & chi phí" },
-  ];
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            <div
-              className={`flex items-center cursor-pointer group ${
-                currentStep === step.id
-                  ? "text-blue-600"
-                  : completedSteps.has(step.id)
-                  ? "text-green-600"
-                  : "text-gray-400"
-              }`}
-              onClick={() => onStepClick(step.id)}
-            >
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
-                  currentStep === step.id
-                    ? "border-blue-600 bg-blue-50"
-                    : completedSteps.has(step.id)
-                    ? "border-green-600 bg-green-50"
-                    : "border-gray-300 bg-white group-hover:border-gray-400"
-                }`}
-              >
-                {completedSteps.has(step.id) ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <span className="text-sm font-medium">{step.id}</span>
-                )}
-              </div>
-              <div className="ml-3 hidden sm:block">
-                <div className="text-sm font-medium">{step.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  {step.description}
-                </div>
-              </div>
-            </div>
-            {index < steps.length - 1 && (
-              <div
-                className={`flex-1 h-0.5 mx-4 ${
-                  completedSteps.has(step.id) ? "bg-green-300" : "bg-gray-200"
-                }`}
-              />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // ===== MAIN ENHANCED COMPONENT =====
 export default function EnhancedPropertyInputForm({
   onCalculate,
@@ -289,11 +218,8 @@ export default function EnhancedPropertyInputForm({
   // ===== STATE MANAGEMENT =====
   const [showLoanDetails, setShowLoanDetails] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
   const [presetLoaded, setPresetLoaded] = useState<string | null>(null);
-
-  // ===== PROGRESSIVE DISCLOSURE STATE =====
-  // completedSteps is now computed via useMemo to avoid infinite loops
+  // const [currentStep, setCurrentStep] = useState(1); // COMMENTED OUT
 
   // ===== FORM SETUP =====
   const form = useForm<RealEstateInputs>({
@@ -314,7 +240,6 @@ export default function EnhancedPropertyInputForm({
   // ===== PRESET HANDLER =====
   React.useEffect(() => {
     if (selectedPreset?.inputs) {
-      // Populate form with preset values
       Object.entries(selectedPreset.inputs).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           try {
@@ -327,7 +252,7 @@ export default function EnhancedPropertyInputForm({
         }
       });
 
-      // Show advanced sections if preset has advanced values
+      // Auto-expand advanced sections if preset has advanced values
       const hasAdvancedValues =
         (selectedPreset.inputs.phiQuanLy &&
           selectedPreset.inputs.phiQuanLy > 0) ||
@@ -351,46 +276,19 @@ export default function EnhancedPropertyInputForm({
         setShowLoanDetails(true);
       }
 
-      // Set preset loaded indicator
       setPresetLoaded(selectedPreset.name || "Template");
-
-      // Clear preset loaded indicator after 3 seconds
-      setTimeout(() => {
-        setPresetLoaded(null);
-      }, 3000);
+      setTimeout(() => setPresetLoaded(null), 3000);
     }
   }, [selectedPreset, form]);
 
-  // ===== STEP NAVIGATION HANDLER =====
-  const handleStepClick = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
-
-  // ===== STEP COMPLETION LOGIC =====
-  const stepValidation = useMemo(() => {
+  // ===== VALIDATION LOGIC =====
+  const canCalculate = useMemo(() => {
     const giaTriBDS = watchedValues.giaTriBDS || 0;
     const vonTuCo = watchedValues.vonTuCo || 0;
-    const tienThueThang = watchedValues.tienThueThang || 0;
-    const chiPhiTrangBi = watchedValues.chiPhiTrangBi || 0;
-
-    return {
-      step1: giaTriBDS > 0 && vonTuCo >= 0, // Basic property info
-      step2: tienThueThang > 0, // Rental income
-      step3: true, // Personal finance (optional)
-      canCalculate: giaTriBDS > 0 && vonTuCo >= 0, // Minimum for calculation
-    };
+    return giaTriBDS > 0 && vonTuCo >= 0;
   }, [watchedValues]);
 
-  // Auto-update completed steps - use useMemo to avoid infinite loops
-  const completedSteps = useMemo(() => {
-    const newCompletedSteps = new Set<number>();
-    if (stepValidation.step1) newCompletedSteps.add(1);
-    if (stepValidation.step2) newCompletedSteps.add(2);
-    if (stepValidation.step3) newCompletedSteps.add(3);
-    return newCompletedSteps;
-  }, [stepValidation.step1, stepValidation.step2, stepValidation.step3]);
-
-  // ===== ENHANCED CALCULATIONS =====
+  // ===== CALCULATIONS FOR PREVIEW =====
   const calculations = useMemo(() => {
     const giaTriBDS = watchedValues.giaTriBDS || 0;
     const vonTuCo = watchedValues.vonTuCo || 0;
@@ -398,7 +296,6 @@ export default function EnhancedPropertyInputForm({
     const laiSuatUuDai = watchedValues.laiSuatUuDai || 8;
     const laiSuatThaNoi = watchedValues.laiSuatThaNoi || 10;
     const thoiGianVay = watchedValues.thoiGianVay || 20;
-    const thoiGianUuDai = watchedValues.thoiGianUuDai || 12;
     const tyLeLapDay = watchedValues.tyLeLapDay || 95;
     const phiQuanLy = watchedValues.phiQuanLy || 0;
     const phiBaoTri = watchedValues.phiBaoTri || 1;
@@ -406,23 +303,13 @@ export default function EnhancedPropertyInputForm({
     const chiPhiTrangBi = watchedValues.chiPhiTrangBi || 0;
     const chiPhiMua = watchedValues.chiPhiMua || 2;
 
-    // Step 1: Loan calculation
+    // Basic calculations
     const soTienVay = Math.max(0, giaTriBDS - vonTuCo);
     const tyLeVay = giaTriBDS > 0 ? (soTienVay / giaTriBDS) * 100 : 0;
 
-    // Step 2: Monthly payments (simplified calculation)
-    const laiSuatThangUuDai = laiSuatUuDai / 100 / 12;
+    // Monthly payments (simplified)
     const laiSuatThangThaNoi = laiSuatThaNoi / 100 / 12;
     const soThangVay = thoiGianVay * 12;
-
-    const traNoHangThangUuDai =
-      soTienVay > 0 && laiSuatThangUuDai > 0
-        ? (soTienVay *
-            laiSuatThangUuDai *
-            Math.pow(1 + laiSuatThangUuDai, soThangVay)) /
-          (Math.pow(1 + laiSuatThangUuDai, soThangVay) - 1)
-        : 0;
-
     const traNoHangThangThaNoi =
       soTienVay > 0 && laiSuatThangThaNoi > 0
         ? (soTienVay *
@@ -431,30 +318,26 @@ export default function EnhancedPropertyInputForm({
           (Math.pow(1 + laiSuatThangThaNoi, soThangVay) - 1)
         : 0;
 
-    // Step 3: Income and expenses
+    // Income and expenses
     const thuNhapThueThucTe = tienThueThang * (tyLeLapDay / 100);
     const chiPhiHangThang =
       phiQuanLy +
       (giaTriBDS * phiBaoTri) / 100 / 12 +
       (giaTriBDS * baoHiemTaiSan) / 100 / 12;
 
-    // Step 4: Cash flow
-    const dongTienRong =
-      thuNhapThueThucTe - traNoHangThangThaNoi - chiPhiHangThang;
+    // Cash flow
+    const dongTienRong = thuNhapThueThucTe - traNoHangThangThaNoi - chiPhiHangThang;
 
-    // Step 5: Initial costs
-    const tongChiPhiBanDau =
-      vonTuCo + chiPhiTrangBi + (giaTriBDS * chiPhiMua) / 100;
+    // Initial costs
+    const tongChiPhiBanDau = vonTuCo + chiPhiTrangBi + (giaTriBDS * chiPhiMua) / 100;
 
-    // Step 6: ROI calculation (simplified)
-    const roiHangNam =
-      tongChiPhiBanDau > 0 ? ((dongTienRong * 12) / tongChiPhiBanDau) * 100 : 0;
+    // ROI
+    const roiHangNam = tongChiPhiBanDau > 0 ? ((dongTienRong * 12) / tongChiPhiBanDau) * 100 : 0;
 
     return {
       soTienVay,
       vonTuCo,
       tyLeVay,
-      traNoHangThangUuDai,
       traNoHangThangThaNoi,
       thuNhapThueThucTe,
       chiPhiHangThang,
@@ -467,50 +350,42 @@ export default function EnhancedPropertyInputForm({
   // ===== FORM SUBMISSION =====
   const onSubmit = useCallback(
     (data: RealEstateInputs) => {
-      // Include the calculated tyLeVay in the data before passing to onCalculate
       const dataWithCalculatedTyLeVay = {
         ...data,
-        tyLeVay: calculations.tyLeVay, // Add the calculated tyLeVay
+        tyLeVay: calculations.tyLeVay,
       };
       onCalculate(dataWithCalculatedTyLeVay);
     },
     [onCalculate, calculations.tyLeVay]
   );
 
-  // ===== PROGRESS CALCULATION =====
-  const formProgress = useMemo(() => {
-    let completedFields = 0;
-    const totalFields = 2; // giaTriBDS, vonTuCo are required
-
-    if (watchedValues.giaTriBDS && watchedValues.giaTriBDS > 0)
-      completedFields++;
-    if (watchedValues.vonTuCo && watchedValues.vonTuCo >= 0) completedFields++;
-
-    return Math.round((completedFields / totalFields) * 100);
-  }, [watchedValues]);
-
   // ===== RENDER =====
   return (
     <TooltipProvider>
-      {/* @ts-ignore */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* ===== HEADER CARD ===== */}
+        {/* ===== SIMPLIFIED HEADER CARD (No Progress Bar) ===== */}
         <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <PiggyBank className="h-6 w-6 text-blue-600" />
+                  <Home className="h-6 w-6 text-blue-600" />
                   Thông Tin Bất Động Sản
                 </CardTitle>
                 <CardDescription>
-                  &quot;Nhập thông tin cơ bản để tính toán đầu tư bất động
-                  sản&quot;
+                  "Chỉ cần giá nhà và số tiền bạn có - chúng tôi sẽ tính toán tất cả còn lại"
                 </CardDescription>
               </div>
+              {canCalculate && (
+                <Badge className="bg-green-100 text-green-800 border-green-300">
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Sẵn sàng tính toán
+                </Badge>
+              )}
             </div>
 
-            {/* Progress Bar */}
+            {/* COMMENTED OUT: Progress Bar */}
+            {/* 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
@@ -520,6 +395,7 @@ export default function EnhancedPropertyInputForm({
               </div>
               <Progress value={formProgress} className="h-2" />
             </div>
+            */}
           </CardHeader>
         </Card>
 
@@ -528,518 +404,202 @@ export default function EnhancedPropertyInputForm({
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription className="text-green-800">
-              <strong>Đã tải template &quot;{presetLoaded}&quot;!</strong> Các
-              thông tin đã được điền tự động vào form. Bạn có thể chỉnh sửa theo
-              nhu cầu.
+              <strong>Đã tải template "{presetLoaded}"!</strong> Các thông tin đã được điền tự động vào form.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* ===== STEP INDICATOR ===== */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="pt-6">
-            <StepIndicator
-              currentStep={currentStep}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-            />
+        {/* ===== MAIN INPUT SECTION - FOCUSED ON 2 KEY INPUTS ===== */}
+        <Card className="border-2 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Thông Tin Cốt Lõi
+            </CardTitle>
+            <CardDescription>
+              Chỉ cần 2 thông tin này để bắt đầu phân tích
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Primary Inputs - Highlighted */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="giaTriBDS" className="text-base font-medium flex items-center gap-2">
+                  <Home className="h-4 w-4 text-blue-600" />
+                  Giá trị bất động sản
+                  <span className="text-red-500">*</span>
+                </Label>
+                <SmartCurrencyInput
+                  value={watchedValues.giaTriBDS || 0}
+                  onChange={(value) => form.setValue("giaTriBDS", value)}
+                  placeholder="Ví dụ: 2,400,000,000"
+                  className="text-lg font-medium"
+                  tooltip="Giá trị thực tế của bất động sản bạn muốn mua"
+                />
+                {errors.giaTriBDS && (
+                  <p className="text-sm text-red-500">{errors.giaTriBDS.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vonTuCo" className="text-base font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  Vốn tự có
+                  <span className="text-red-500">*</span>
+                </Label>
+                <SmartCurrencyInput
+                  value={watchedValues.vonTuCo || 0}
+                  onChange={(value) => form.setValue("vonTuCo", value)}
+                  placeholder="Ví dụ: 750,000,000"
+                  className="text-lg font-medium"
+                  tooltip="Số tiền bạn có thể bỏ ra mua bất động sản"
+                />
+                {errors.vonTuCo && (
+                  <p className="text-sm text-red-500">{errors.vonTuCo.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Preview */}
+            {canCalculate && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium mb-2">Xem trước nhanh:</h4>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">Số tiền vay</div>
+                    <div className="font-semibold text-blue-600">
+                      {formatVND(calculations.soTienVay)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {calculations.tyLeVay.toFixed(1)}% giá trị BĐS
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">Dòng tiền ước tính</div>
+                    <div className={`font-semibold ${
+                      calculations.dongTienRong >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {formatVND(calculations.dongTienRong)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">mỗi tháng</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">ROI ước tính</div>
+                    <div className={`font-semibold ${
+                      calculations.roiHangNam >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {calculations.roiHangNam.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">hàng năm</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* ===== STEP 1: CORE PROPERTY INFORMATION ===== */}
-        {currentStep === 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Thông Tin Cơ Bản
-              </CardTitle>
-              <CardDescription>
-                Những thông tin quan trọng nhất về BĐS của bạn
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Property Value */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="giaTriBDS"
-                    className="flex items-center gap-2"
-                  >
-                    <Banknote className="h-4 w-4" />
-                    Giá trị BĐS *
-                  </Label>
-                  <SmartCurrencyInput
-                    value={watchedValues.giaTriBDS || 0}
-                    onChange={(value) => form.setValue("giaTriBDS", value)}
-                    placeholder="VD: 3.2 tỷ hoặc 3200000000"
-                    className={errors.giaTriBDS ? "border-red-500" : ""}
-                  />
-                  {errors.giaTriBDS && (
-                    <p className="text-sm text-red-600">
-                      {errors.giaTriBDS.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Own Capital */}
-                <div className="space-y-2">
-                  <Label htmlFor="vonTuCo" className="flex items-center gap-2">
-                    <PiggyBank className="h-4 w-4" />
-                    Vốn tự có *
-                  </Label>
-                  <SmartCurrencyInput
-                    value={watchedValues.vonTuCo || 0}
-                    onChange={(value) => form.setValue("vonTuCo", value)}
-                    placeholder="VD: 1 tỷ hoặc 1000000000"
-                    className={errors.vonTuCo ? "border-red-500" : ""}
-                  />
-                  {errors.vonTuCo && (
-                    <p className="text-sm text-red-600">
-                      {errors.vonTuCo.message}
-                    </p>
-                  )}
-                </div>
+        {/* ===== RENTAL INCOME SECTION ===== */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Thu Nhập Dự Kiến
+            </CardTitle>
+            <CardDescription>
+              Thông tin về thu nhập từ cho thuê (tùy chọn)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="tienThueThang" className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  Tiền thuê/tháng
+                </Label>
+                <SmartCurrencyInput
+                  value={watchedValues.tienThueThang || 0}
+                  onChange={(value) => form.setValue("tienThueThang", value)}
+                  placeholder="Ví dụ: 6,000,000"
+                  tooltip="Số tiền thuê dự kiến mỗi tháng"
+                />
               </div>
 
-              {/* Step Navigation */}
-              <div className="flex justify-between pt-4">
-                <div></div>
-                <Button
-                  onClick={() => handleStepClick(2)}
-                  disabled={!stepValidation.step1}
-                  className="flex items-center gap-2"
-                >
-                  Tiếp theo: Thu nhập dự kiến
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="tyLeLapDay" className="flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  Tỷ lệ lấp đầy
+                </Label>
+                <PercentageInput
+                  value={watchedValues.tyLeLapDay || 95}
+                  onChange={(value) => form.setValue("tyLeLapDay", value)}
+                  min={50}
+                  max={100}
+                  tooltip="Tỷ lệ thời gian có khách thuê trong năm"
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* ===== STEP 2: RENTAL INCOME & SETUP ===== */}
-        {currentStep === 2 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Thu Nhập Dự Kiến
-              </CardTitle>
-              <CardDescription>
-                Tiền thuê và chi phí setup ban đầu
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Monthly Rent */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="tienThueThang"
-                    className="flex items-center gap-2"
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    Tiền thuê dự kiến/tháng *
-                  </Label>
-                  <SmartCurrencyInput
-                    value={watchedValues.tienThueThang || 0}
-                    onChange={(value) => form.setValue("tienThueThang", value)}
-                    placeholder="VD: 25 triệu"
-                    tooltip="Số tiền thuê bạn dự kiến thu được mỗi tháng"
-                  />
-                </div>
-
-                {/* Setup Cost */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="chiPhiTrangBi"
-                    className="flex items-center gap-2"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Chi phí trang bị
-                  </Label>
-                  <SmartCurrencyInput
-                    value={watchedValues.chiPhiTrangBi || 0}
-                    onChange={(value) => form.setValue("chiPhiTrangBi", value)}
-                    placeholder="VD: 100 triệu"
-                    tooltip="Chi phí nội thất, sửa chữa để chuẩn bị cho thuê"
-                  />
-                </div>
-              </div>
-
-              {/* Quick Calculation Preview */}
-              {calculations.soTienVay > 0 && (
-                <div className="p-4 bg-gray-50 rounded-lg border">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calculator className="h-4 w-4" />
-                    <span className="font-medium">Tính toán nhanh</span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Số tiền vay</div>
-                      <div className="font-semibold">
-                        {formatVND(calculations.soTienVay)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Tỷ lệ vay</div>
-                      <div className="font-semibold">
-                        {calculations.tyLeVay.toFixed(1)}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Vốn tự có</div>
-                      <div className="font-semibold text-blue-600">
-                        {formatVND(calculations.vonTuCo)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">
-                        Dòng tiền ước tính
-                      </div>
-                      <div
-                        className={`font-semibold ${
-                          calculations.dongTienRong >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {formatVND(calculations.dongTienRong)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">ROI ước tính</div>
-                      <div
-                        className={`font-semibold ${
-                          calculations.roiHangNam >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {calculations.roiHangNam.toFixed(1)}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step Navigation */}
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleStepClick(1)}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowDown className="h-4 w-4 rotate-90" />
-                  Quay lại
-                </Button>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStepClick(3)}
-                    className="flex items-center gap-2"
-                  >
-                    Tài chính cá nhân (tùy chọn)
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={() => onCalculate(watchedValues)}
-                    disabled={!stepValidation.canCalculate || isLoading}
-                    className="flex items-center gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Đang tính toán...
-                      </>
-                    ) : (
-                      <>
-                        <Calculator className="h-4 w-4" />
-                        Tính toán ngay
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ===== STEP 3: PERSONAL FINANCE ===== */}
-        {currentStep === 3 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PiggyBank className="h-5 w-5" />
-                Tài Chính Cá Nhân
-              </CardTitle>
-              <CardDescription>
-                Thu nhập khác và chi phí sinh hoạt để tính dòng tiền thực tế
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Other Income */}
-                <div className="space-y-2">
-                  <Label>Thu nhập khác/tháng</Label>
-                  <SmartCurrencyInput
-                    value={watchedValues.thuNhapKhac || 0}
-                    onChange={(value) => form.setValue("thuNhapKhac", value)}
-                    placeholder="VD: 5,000,000"
-                    tooltip="Thu nhập từ các nguồn khác ngoài cho thuê BĐS (lương, kinh doanh, đầu tư...)"
-                  />
-                </div>
-
-                {/* Living Expenses */}
-                <div className="space-y-2">
-                  <Label>Chi phí sinh hoạt/tháng</Label>
-                  <SmartCurrencyInput
-                    value={watchedValues.chiPhiSinhHoat || 0}
-                    onChange={(value) => form.setValue("chiPhiSinhHoat", value)}
-                    placeholder="VD: 10,000,000"
-                    tooltip="Chi phí sinh hoạt cá nhân/gia đình hàng tháng để tính toán dòng tiền thực tế"
-                  />
-                </div>
-              </div>
-
-              {/* Personal Finance Impact */}
-              {(watchedValues.thuNhapKhac > 0 ||
-                watchedValues.chiPhiSinhHoat > 0) && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Lightbulb className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium text-blue-900">
-                      Tác động tài chính cá nhân
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-blue-700">Thu nhập khác</div>
-                      <div className="font-semibold text-green-600">
-                        +{formatVND(watchedValues.thuNhapKhac || 0)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-blue-700">Chi phí sinh hoạt</div>
-                      <div className="font-semibold text-red-600">
-                        -{formatVND(watchedValues.chiPhiSinhHoat || 0)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-blue-700">Tác động ròng</div>
-                      <div
-                        className={`font-semibold ${
-                          (watchedValues.thuNhapKhac || 0) -
-                            (watchedValues.chiPhiSinhHoat || 0) >=
-                          0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {formatVND(
-                          (watchedValues.thuNhapKhac || 0) -
-                            (watchedValues.chiPhiSinhHoat || 0)
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step Navigation */}
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleStepClick(2)}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowDown className="h-4 w-4 rotate-90" />
-                  Quay lại
-                </Button>
-                <Button
-                  onClick={() => onCalculate(watchedValues)}
-                  disabled={!stepValidation.canCalculate || isLoading}
-                  className="flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Đang tính toán...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="h-4 w-4" />
-                      Tính toán với tài chính cá nhân
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ===== ADVANCED SETTINGS (Always Available) ===== */}
+        {/* ===== LOAN DETAILS (COLLAPSIBLE) ===== */}
         <Collapsible open={showLoanDetails} onOpenChange={setShowLoanDetails}>
           <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <span className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Chi tiết khoản vay (tùy chọn)
-              </span>
-              {showLoanDetails ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
+            <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                    <CardTitle>Chi Tiết Khoản Vay</CardTitle>
+                  </div>
+                  {showLoanDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+                <CardDescription>
+                  Điều chỉnh thông tin lãi suất và thời gian vay
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="pt-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-2">
-                    <Label>Lãi suất ưu đãi (%/năm)</Label>
+                    <Label htmlFor="laiSuatUuDai">Lãi suất ưu đãi (%)</Label>
                     <PercentageInput
                       value={watchedValues.laiSuatUuDai || 8}
                       onChange={(value) => form.setValue("laiSuatUuDai", value)}
-                      tooltip="Lãi suất trong thời gian ưu đãi"
+                      min={1}
                       max={20}
+                      tooltip="Lãi suất trong giai đoạn ưu đãi"
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      Thời gian ưu đãi (tháng)
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs">
-                            Thời gian áp dụng lãi suất ưu đãi thấp hơn. Sau đó
-                            sẽ chuyển sang lãi suất thả nổi cao hơn.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </Label>
+                    <Label htmlFor="thoiGianUuDai">Thời gian ưu đãi (tháng)</Label>
                     <Input
                       type="number"
                       value={watchedValues.thoiGianUuDai || 12}
-                      onChange={(e) =>
-                        form.setValue(
-                          "thoiGianUuDai",
-                          parseInt(e.target.value) || 12
-                        )
-                      }
-                      min="0"
-                      max="60"
+                      onChange={(e) => form.setValue("thoiGianUuDai", parseInt(e.target.value))}
+                      min={1}
+                      max={60}
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <Label>Lãi suất thả nổi (%/năm)</Label>
+                    <Label htmlFor="laiSuatThaNoi">Lãi suất thả nổi (%)</Label>
                     <PercentageInput
                       value={watchedValues.laiSuatThaNoi || 10}
-                      onChange={(value) =>
-                        form.setValue("laiSuatThaNoi", value)
-                      }
-                      tooltip="Lãi suất sau thời gian ưu đãi"
+                      onChange={(value) => form.setValue("laiSuatThaNoi", value)}
+                      min={1}
                       max={25}
+                      tooltip="Lãi suất sau giai đoạn ưu đãi"
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      Thời gian vay (năm)
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs">
-                            Tổng thời gian vay tiền từ ngân hàng. Thời gian càng
-                            dài, số tiền trả hàng tháng càng thấp nhưng tổng lãi
-                            phải trả càng cao.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </Label>
+                    <Label htmlFor="thoiGianVay">Thời gian vay (năm)</Label>
                     <Input
                       type="number"
                       value={watchedValues.thoiGianVay || 20}
-                      onChange={(e) =>
-                        form.setValue(
-                          "thoiGianVay",
-                          parseInt(e.target.value) || 20
-                        )
-                      }
-                      min="1"
-                      max="30"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-
-        <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <span className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Cài đặt nâng cao (tùy chọn)
-              </span>
-              {showAdvanced ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Tỷ lệ lấp đầy (%)</Label>
-                    <PercentageInput
-                      value={watchedValues.tyLeLapDay || 95}
-                      onChange={(value) => form.setValue("tyLeLapDay", value)}
-                      tooltip="Tỷ lệ thời gian có người thuê"
-                      min={50}
-                      max={100}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Phí quản lý/tháng</Label>
-                    <SmartCurrencyInput
-                      value={watchedValues.phiQuanLy || 0}
-                      onChange={(value) => form.setValue("phiQuanLy", value)}
-                      placeholder="VD: 500,000"
-                      tooltip="Chi phí thuê công ty quản lý bất động sản (nếu có). Thường từ 5-10% tiền thuê."
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Phí bảo trì (%/năm)</Label>
-                    <PercentageInput
-                      value={watchedValues.phiBaoTri || 1}
-                      onChange={(value) => form.setValue("phiBaoTri", value)}
-                      tooltip="% giá trị BĐS dành cho bảo trì hàng năm"
-                      max={5}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Thuế suất cho thuê (%)</Label>
-                    <PercentageInput
-                      value={watchedValues.thueSuatChoThue || 10}
-                      onChange={(value) =>
-                        form.setValue("thueSuatChoThue", value)
-                      }
-                      tooltip="Thuế phải nộp trên thu nhập cho thuê"
+                      onChange={(e) => form.setValue("thoiGianVay", parseInt(e.target.value))}
+                      min={1}
                       max={50}
                     />
                   </div>
@@ -1048,6 +608,106 @@ export default function EnhancedPropertyInputForm({
             </Card>
           </CollapsibleContent>
         </Collapsible>
+
+        {/* ===== ADVANCED OPTIONS (COLLAPSIBLE) ===== */}
+        <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+          <CollapsibleTrigger asChild>
+            <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-purple-600" />
+                    <CardTitle>Tùy Chọn Nâng Cao</CardTitle>
+                  </div>
+                  {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+                <CardDescription>
+                  Chi phí và thông tin chi tiết khác
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="chiPhiTrangBi">Chi phí trang bị</Label>
+                    <SmartCurrencyInput
+                      value={watchedValues.chiPhiTrangBi || 0}
+                      onChange={(value) => form.setValue("chiPhiTrangBi", value)}
+                      placeholder="Ví dụ: 100,000,000"
+                      tooltip="Chi phí nội thất, trang bị"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phiQuanLy">Phí quản lý/tháng</Label>
+                    <SmartCurrencyInput
+                      value={watchedValues.phiQuanLy || 0}
+                      onChange={(value) => form.setValue("phiQuanLy", value)}
+                      placeholder="Ví dụ: 480,000"
+                      tooltip="Phí quản lý chung cư hàng tháng"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phiBaoTri">Phí bảo trì (%/năm)</Label>
+                    <PercentageInput
+                      value={watchedValues.phiBaoTri || 1}
+                      onChange={(value) => form.setValue("phiBaoTri", value)}
+                      min={0}
+                      max={5}
+                      tooltip="Phí bảo trì định kỳ (% giá trị BĐS/năm)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="baoHiemTaiSan">Bảo hiểm (%/năm)</Label>
+                    <PercentageInput
+                      value={watchedValues.baoHiemTaiSan || 0.1}
+                      onChange={(value) => form.setValue("baoHiemTaiSan", value)}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      tooltip="Bảo hiểm tài sản (% giá trị BĐS/năm)"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* ===== CALCULATE BUTTON ===== */}
+        <Card className="border-2 border-green-200 bg-green-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-green-800">Sẵn sàng tính toán?</h3>
+                <p className="text-sm text-green-600">
+                  Chúng tôi sẽ phân tích toàn diện và đưa ra kết quả chi tiết
+                </p>
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                disabled={!canCalculate || isLoading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang tính toán...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Tính toán ngay
+                    <Rocket className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </form>
     </TooltipProvider>
   );
