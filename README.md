@@ -1,6 +1,6 @@
-# Fin-Tools: Công Cụ Phân Tích Đầu Tư Bất Động Sản Thông Minh
+# PropertyWise: Cố Vấn Bất Động Sản Thông Minh
 
-Fin-Tools là một ứng dụng web được xây dựng với Next.js, cung cấp các công cụ mạnh mẽ giúp bạn phân tích và đưa ra quyết định đầu tư bất động sản một cách thông minh và hiệu quả. Ứng dụng tập trung vào việc đơn giản hóa các tính toán tài chính phức tạp và trực quan hóa dữ liệu để người dùng có cái nhìn toàn diện nhất về các cơ hội đầu tư.
+PropertyWise là nền tảng phân tích đầu tư bất động sản thông minh được xây dựng với Next.js và AI. **"Hiểu bạn như chính bạn"** - chỉ cần giá nhà và số tiền bạn có, chúng tôi sẽ tính toán tất cả còn lại. Ứng dụng cung cấp phân tích ROI, dòng tiền, rủi ro và so sánh các kịch bản đầu tư với gợi ý cá nhân hóa, giúp bạn đưa ra quyết định thông minh.
 
 ## Các Tính Năng Chính
 

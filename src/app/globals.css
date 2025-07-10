@@ -119,11 +119,61 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+  
+  /* Scroll snap support */
+  .scroll-snap-container {
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    height: 100vh;
+  }
+  
+  .scroll-snap-section {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    height: 100vh;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #2563eb, #7c3aed);
+  }
 }
+
+/* ===== CUSTOM COMPONENTS ===== */
+@layer components {
+  .container {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
+  }
 
 /* ===== SONNER TOAST CUSTOMIZATION ===== */
 /* Ensure solid, non-transparent backgrounds for better visibility */
-@layer components {
   /* Main toast container */
   [data-sonner-toast] {
     background: var(--normal-bg) !important;
