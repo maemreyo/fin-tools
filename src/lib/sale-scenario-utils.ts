@@ -91,7 +91,8 @@ export function calculateRemainingLoanBalanceAtTime(
  */
 export function calculateAccumulatedCashFlows(
   inputs: RealEstateInputs,
-  holdingPeriodMonths: number
+  holdingPeriodMonths: number,
+  propertyAppreciationRate: number // Add this parameter
 ): {
   totalCashFlow: number;
   yearlyBreakdown: YearlyBreakdown[];
@@ -113,7 +114,7 @@ export function calculateAccumulatedCashFlows(
     const monthsElapsed = Math.min(year * 12, holdingPeriodMonths);
     const propertyValue = projectPropertyValue(
       inputs.giaTriBDS || 0,
-      5, // Default 5% appreciation - will be parameterized
+      propertyAppreciationRate, // Use the new parameter
       monthsElapsed
     );
     
@@ -181,7 +182,8 @@ export function calculateSaleAnalysis(
   // Calculate accumulated cash flows
   const { totalCashFlow, yearlyBreakdown } = calculateAccumulatedCashFlows(
     inputs,
-    holdingPeriodMonths
+    holdingPeriodMonths,
+    holdingPeriodConfig.propertyAppreciationRate
   );
   
   // Calculate total returns and ROI

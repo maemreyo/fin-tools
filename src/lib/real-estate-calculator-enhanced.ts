@@ -93,7 +93,8 @@ export function calculateRealEstateInvestmentWithSale(
  */
 export function calculateHoldingPeriodAnalysis(
   inputs: RealEstateInputs,
-  maxHoldingPeriodYears: number = 20
+  maxHoldingPeriodYears: number = 20,
+  appreciationRate: number = 5 // Add this parameter
 ): {
   yearlyBreakdown: YearlyBreakdown[];
   optimalSaleYear: number;
@@ -107,7 +108,7 @@ export function calculateHoldingPeriodAnalysis(
 } {
   
   const maxMonths = maxHoldingPeriodYears * 12;
-  const { yearlyBreakdown } = calculateAccumulatedCashFlows(inputs, maxMonths);
+  const { yearlyBreakdown } = calculateAccumulatedCashFlows(inputs, maxMonths, appreciationRate);
   
   // Find optimal sale year (highest ROI)
   const optimalYear = yearlyBreakdown.reduce((best, current, index) => 
