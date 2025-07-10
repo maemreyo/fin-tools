@@ -6,7 +6,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ArrowRight,
   Plus,
@@ -254,17 +254,17 @@ export default function UserFlowGuidance({
           <div className="space-y-3 mb-4">
             {primarySteps.map((step, index) => (
               <Alert key={step.id} className="border-blue-300 bg-white">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                    {step.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-blue-900">{step.title}</h4>
-                    <p className="text-sm text-blue-700 mt-1">{step.description}</p>
-                  </div>
+                {/* Icon - this will be in the first grid column */} 
+                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                  {step.icon}
+                </div>
+                {/* Content wrapper - this will be in the second grid column */} 
+                <div className="col-start-2 flex flex-col gap-1">
+                  <AlertTitle>{step.title}</AlertTitle>
+                  <AlertDescription>{step.description}</AlertDescription>
                   <Button
                     onClick={step.onAction}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white self-end mt-2" 
                     disabled={!step.onAction}
                   >
                     {step.action}
@@ -282,13 +282,13 @@ export default function UserFlowGuidance({
             <h4 className="text-sm font-medium text-blue-800 mb-2">Tùy chọn bổ sung</h4>
             {secondarySteps.map((step) => (
               <div key={step.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2">
-                  <div className="text-blue-600">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="text-blue-600 flex-shrink-0">
                     {step.icon}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <span className="font-medium text-blue-900">{step.title}</span>
-                    <p className="text-xs text-blue-600 mt-1">{step.description}</p>
+                    <p className="text-xs text-blue-600 mt-1 truncate">{step.description}</p>
                   </div>
                 </div>
                 <Button
@@ -316,14 +316,14 @@ export default function UserFlowGuidance({
                   variant="ghost"
                   size="sm"
                   onClick={step.onAction}
-                  className="justify-start text-blue-700 hover:bg-blue-100 h-auto p-3"
+                  className="justify-start text-blue-700 hover:bg-blue-100 h-auto p-3 w-full"
                   disabled={!step.onAction}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {step.icon}
-                    <div className="text-left">
-                      <div className="font-medium">{step.title}</div>
-                      <div className="text-xs opacity-80">{step.description}</div>
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="font-medium truncate">{step.title}</div>
+                      <div className="text-xs opacity-80 truncate">{step.description}</div>
                     </div>
                   </div>
                 </Button>

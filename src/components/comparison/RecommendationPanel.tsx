@@ -58,7 +58,7 @@ interface Recommendation {
   type: "primary" | "alternative" | "caution";
   title: string;
   scenario: CalculationResultWithSale;
-  scenarioType: "buy_now" | "buy_future";
+  scenarioType: "buy_now" | "buy_future" | "standard";
   reasoning: string[];
   keyMetrics: { label: string; value: string; isGood: boolean }[];
   actionItems: string[];

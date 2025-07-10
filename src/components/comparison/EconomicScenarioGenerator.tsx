@@ -293,9 +293,9 @@ export default function EconomicScenarioGeneratorUI({
         // Create future scenario
         const futureScenario: FutureScenario = {
           id: `future_${scenarioId}_${Date.now()}`,
-          scenarioName:
-            futureScenarioConfig.scenarioName ||
-            `${economicScenario.name} - ${futureScenarioConfig.futureTimeMonths} tháng`,
+          scenarioName: futureScenarioConfig.scenarioName
+            ? `${futureScenarioConfig.scenarioName} - ${economicScenario.name} (${futureScenarioConfig.futureTimeMonths} tháng)`
+            : `${economicScenario.name} (${futureScenarioConfig.futureTimeMonths} tháng)`,
           futureDate: futureScenarioConfig.targetDate,
           monthsFromNow: futureScenarioConfig.futureTimeMonths,
           economicScenario: {
