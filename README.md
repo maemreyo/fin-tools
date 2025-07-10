@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fin-Tools: Công Cụ Phân Tích Đầu Tư Bất Động Sản Thông Minh
 
-## Getting Started
+Fin-Tools là một ứng dụng web được xây dựng với Next.js, cung cấp các công cụ mạnh mẽ giúp bạn phân tích và đưa ra quyết định đầu tư bất động sản một cách thông minh và hiệu quả. Ứng dụng tập trung vào việc đơn giản hóa các tính toán tài chính phức tạp và trực quan hóa dữ liệu để người dùng có cái nhìn toàn diện nhất về các cơ hội đầu tư.
 
-First, run the development server:
+## Các Tính Năng Chính
+
+*   **Tính Toán Đầu Tư Bất Động Sản:** Nhập các thông số cơ bản của bất động sản (giá trị, vốn tự có, chi phí, lãi suất, dòng tiền thuê, v.v.) để nhận được phân tích chi tiết về ROI, dòng tiền ròng, thời gian hoàn vốn và các chỉ số tài chính quan trọng khác.
+
+*   **Phân Tích Sale Analysis:** Đánh giá lợi nhuận tiềm năng khi bán bất động sản sau một khoảng thời gian nắm giữ nhất định. Tính năng này dự phóng giá trị tài sản, số dư nợ còn lại, chi phí bán và tổng lợi nhuận thu được, giúp bạn xác định thời điểm bán tối ưu.
+
+*   **So Sánh Kịch Bản "Mua Ngay vs. Mua Tương Lai":** Một công cụ mạnh mẽ cho phép bạn so sánh trực quan kết quả đầu tư nếu mua bất động sản tại thời điểm hiện tại với việc mua cùng bất động sản đó trong tương lai, dưới các điều kiện kinh tế dự phóng khác nhau. Tính năng này giúp bạn đưa ra quyết định chiến lược về thời điểm đầu tư.
+
+*   **Kịch Bản Kinh Tế Tùy Chỉnh:** Tạo và áp dụng các kịch bản kinh tế khác nhau (ví dụ: thị trường tăng trưởng, suy thoái, ổn định) để xem xét tác động của chúng đến các dự phóng đầu tư trong tương lai.
+
+*   **Giao Diện Trực Quan và Thân Thiện Người Dùng:** Dữ liệu được trình bày rõ ràng thông qua các bảng tóm tắt, thẻ chi tiết và khuyến nghị có tính hành động, giúp người dùng dễ dàng hiểu và đưa ra quyết định.
+
+## Bắt Đầu
+
+Để chạy dự án trên môi trường phát triển của bạn:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ứng dụng sẽ chạy trên [http://localhost:3010](http://localhost:3010).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Triển Khai
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Cách dễ nhất để triển khai ứng dụng Next.js của bạn là sử dụng [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
 
-## Learn More
+Kiểm tra [tài liệu triển khai Next.js](https://nextjs.org/docs/app/building-your-application/deploying) để biết thêm chi tiết.
 
-To learn more about Next.js, take a look at the following resources:
+## Học Hỏi Thêm
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Để tìm hiểu thêm về Next.js, hãy xem các tài nguyên sau:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Learn Next.js](https://nextjs.org/learn)
