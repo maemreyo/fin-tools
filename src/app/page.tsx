@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,39 +9,25 @@ import {
 } from "@/components/ui/collapsible";
 import {
   Calculator,
-  Lightbulb,
-  Loader2,
   ChevronDown,
   ChevronUp,
   Zap,
   BarChart3,
   Sparkles,
-  Brain,
-  Users,
   Building,
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Enhanced imports - UPDATED FOR SALE ANALYSIS
 import HeroSection from "@/components/HeroSection";
 import { CalculationConfirmationDialog } from "@/components/CalculationConfirmationDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { PresetScenarios } from "@/components/PresetScenarios";
 import { CalculationHistory } from "@/components/CalculationHistory";
-
-// EXISTING COMPONENTS - Keep using these
 import PropertyInputForm from "@/components/PropertyInputForm";
-import CalculationResultsModal from "@/components/CalculationResultsModal";
-
-// NEW ENHANCED COMPONENTS - Add these
+import EnhancedCalculationResultsModal from "@/components/CalculationResultsModalEnhanced";
 import EnhancedPropertyInputForm from "@/components/PropertyInputFormEnhanced";
 import SaleScenarioAnalysis from "@/components/SaleScenarioAnalysis";
-
-// Enhanced comparison components - UPDATED
 import EnhancedVisualComparison from "@/components/comparison/EnhancedVisualComparison";
 import EconomicScenarioGeneratorUI from "@/components/comparison/EconomicScenarioGenerator";
-
-// UPDATED IMPORTS FOR SALE ANALYSIS
 import { useCalculatorState } from "@/hooks/useCalculatorState";
 import { PRESET_SCENARIOS } from "@/constants/presetScenarios";
 import {
@@ -57,18 +35,11 @@ import {
   CalculationResult,
   PresetScenario,
 } from "@/types/real-estate";
-
-// NEW IMPORTS FOR SALE ANALYSIS
 import {
   RealEstateInputsWithSaleAnalysis,
   CalculationResultWithSale,
-  HoldingPeriodInputs,
 } from "@/types/sale-scenario";
-import {
-  calculateRealEstateInvestmentWithSale,
-} from "@/lib/real-estate-calculator-enhanced";
-
-// Enhanced types - NEW
+import { calculateRealEstateInvestmentWithSale } from "@/lib/real-estate-calculator-enhanced";
 import {
   EnhancedGeneratedScenario,
   MarketContext,
@@ -95,7 +66,8 @@ export default function EnhancedRealEstateCalculatorPage() {
 
   // Enhanced state - NEW FOR SALE ANALYSIS
   const [useSaleAnalysis, setUseSaleAnalysis] = useState(false);
-  const [saleResults, setSaleResults] = useState<CalculationResultWithSale | null>(null);
+  const [saleResults, setSaleResults] =
+    useState<CalculationResultWithSale | null>(null);
   const [marketContext, setMarketContext] = useState<MarketContext>({
     marketType: "secondary",
     investorType: "new_investor",
@@ -116,28 +88,28 @@ export default function EnhancedRealEstateCalculatorPage() {
     setShowCalculationConfirm(true);
   };
 
-  // NEW HANDLER FOR SALE ANALYSIS
-  const handleCalculateWithSaleAnalysis = (inputs: RealEstateInputsWithSaleAnalysis) => {
+  const handleCalculateWithSaleAnalysis = (
+    inputs: RealEstateInputsWithSaleAnalysis
+  ) => {
     try {
       const result = calculateRealEstateInvestmentWithSale(inputs);
       setSaleResults(result);
       setCurrentInputs(inputs as RealEstateInputs);
-      
+
       // Also set for legacy components
       if (result.saleAnalysis) {
         setSelectedResult(result);
         setIsModalOpen(true);
       }
-      
+
       toast.success("✅ Tính toán hoàn tất với Sale Analysis!");
-      
+
       // Scroll to results
       setTimeout(() => {
-        comparisonRef.current?.scrollIntoView({ behavior: 'smooth' });
+        comparisonRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
-      
     } catch (error) {
-      console.error('Calculation error:', error);
+      console.error("Calculation error:", error);
       toast.error("❌ Có lỗi trong quá trình tính toán. Vui lòng thử lại.");
     }
   };
@@ -172,10 +144,10 @@ export default function EnhancedRealEstateCalculatorPage() {
   const handleToggleSaleAnalysis = () => {
     setUseSaleAnalysis(!useSaleAnalysis);
     setSaleResults(null); // Clear previous results when switching modes
-    
+
     toast.info(
-      useSaleAnalysis 
-        ? "Chuyển về chế độ tính toán cơ bản" 
+      useSaleAnalysis
+        ? "Chuyển về chế độ tính toán cơ bản"
         : "🚀 Chuyển sang chế độ Sale Analysis - Enhanced!"
     );
   };
@@ -183,17 +155,20 @@ export default function EnhancedRealEstateCalculatorPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Page Header */}
-      <PageHeader 
+      <PageHeader
         calculationCount={appState.calculationHistory.length}
         hasCurrentResult={!!selectedResult || !!saleResults}
       />
 
       {/* Hero Section */}
-      <HeroSection onScrollToForm={() => formRef.current?.scrollIntoView({ behavior: "smooth" })} />
+      <HeroSection
+        onScrollToForm={() =>
+          formRef.current?.scrollIntoView({ behavior: "smooth" })
+        }
+      />
 
       {/* Main Content Container */}
       <div className="container mx-auto px-4 py-8 space-y-8">
-        
         {/* Mode Toggle Section */}
         <div className="text-center">
           <div className="inline-flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm border">
@@ -222,7 +197,8 @@ export default function EnhancedRealEstateCalculatorPage() {
           </div>
           {useSaleAnalysis && (
             <p className="text-sm text-muted-foreground mt-2">
-              Phân tích chi tiết kịch bản bán bất động sản với dự phóng ROI và thời điểm tối ưu
+              Phân tích chi tiết kịch bản bán bất động sản với dự phóng ROI và
+              thời điểm tối ưu
             </p>
           )}
         </div>
@@ -255,14 +231,12 @@ export default function EnhancedRealEstateCalculatorPage() {
         {/* Input Form Section */}
         <div ref={formRef} className="scroll-mt-20">
           {useSaleAnalysis ? (
-            // NEW ENHANCED FORM WITH SALE ANALYSIS
             <EnhancedPropertyInputForm
               onCalculate={handleCalculateWithSaleAnalysis}
               isLoading={false}
               selectedPreset={appState.selectedPreset || null}
             />
           ) : (
-            // EXISTING BASIC FORM
             <PropertyInputForm
               onCalculate={handleCalculateWithConfirm}
               isLoading={false}
@@ -274,7 +248,6 @@ export default function EnhancedRealEstateCalculatorPage() {
         {/* Results Section */}
         {(selectedResult || saleResults) && (
           <div ref={comparisonRef} className="scroll-mt-20 space-y-8">
-            
             {/* Sale Analysis Results */}
             {saleResults && saleResults.saleAnalysis && (
               <div className="space-y-6">
@@ -291,7 +264,10 @@ export default function EnhancedRealEstateCalculatorPage() {
             )}
 
             {/* Economic Scenarios Section */}
-            <Collapsible open={showEconomicGenerator} onOpenChange={setShowEconomicGenerator}>
+            <Collapsible
+              open={showEconomicGenerator}
+              onOpenChange={setShowEconomicGenerator}
+            >
               <div className="text-center">
                 <CollapsibleTrigger asChild>
                   <Button variant="outline" size="lg" className="mb-4">
@@ -313,7 +289,9 @@ export default function EnhancedRealEstateCalculatorPage() {
                     onAddToComparison={(results) => {
                       // This would typically add to appState.calculationHistory or a dedicated comparison state
                       // For now, just show a toast
-                      toast.success(`📊 Đã thêm ${results.length} kịch bản vào so sánh!`);
+                      toast.success(
+                        `📊 Đã thêm ${results.length} kịch bản vào so sánh!`
+                      );
                       setShowComparison(true); // Assuming you want to show comparison after adding
                     }}
                     isOpen={showEconomicGenerator}
@@ -350,7 +328,6 @@ export default function EnhancedRealEstateCalculatorPage() {
                 )}
               </CollapsibleContent>
             </Collapsible>
-
           </div>
         )}
 
@@ -365,7 +342,6 @@ export default function EnhancedRealEstateCalculatorPage() {
             onToggleComparison={() => setShowComparison(!showComparison)}
           />
         )}
-
       </div>
 
       {/* Modals */}
@@ -383,7 +359,7 @@ export default function EnhancedRealEstateCalculatorPage() {
       />
 
       {/* Results Modal */}
-      <CalculationResultsModal
+      <EnhancedCalculationResultsModal
         result={selectedResult}
         isOpen={isModalOpen}
         onClose={() => {
@@ -396,7 +372,6 @@ export default function EnhancedRealEstateCalculatorPage() {
           formRef.current?.scrollIntoView({ behavior: "smooth" });
         }}
       />
-
     </div>
   );
 }

@@ -60,6 +60,7 @@ import {
   Zap,
   Shield,
   Eye,
+  FileText,
 } from "lucide-react";
 
 import { CalculationResultWithSale } from "@/types/sale-scenario";
@@ -107,6 +108,9 @@ export default function SaleScenarioAnalysis({
   return (
     <div className={`space-y-6 ${className}`}>
       
+      {/* ===== REPORT SUMMARY ===== */}
+      <SaleReportSummary saleAnalysis={saleAnalysis} baseResult={result} />
+
       {/* ===== SUMMARY CARDS ===== */}
       <SaleAnalysisSummary 
         saleAnalysis={saleAnalysis} 
@@ -154,6 +158,82 @@ export default function SaleScenarioAnalysis({
       </Card>
 
     </div>
+  );
+}
+
+// ===== REPORT SUMMARY COMPONENT =====
+function SaleReportSummary({ 
+  saleAnalysis, 
+  baseResult 
+}: { 
+  saleAnalysis: any, 
+  baseResult: CalculationResultWithSale 
+}) {
+  const holdingYears = (saleAnalysis.holdingPeriodInputs.holdingPeriodMonths / 12).toFixed(1);
+  const initialInvestment = baseResult.steps.tongVonBanDau || 0;
+  const totalReturn = saleAnalysis.totalReturn;
+  const totalROI = saleAnalysis.totalROIOnSale;
+  const optimalYear = saleAnalysis.optimalSaleTiming.bestYear;
+  const optimalROI = saleAnalysis.optimalSaleTiming.bestROI;
+
+  return (
+    <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-blue-800">
+          <FileText className="h-6 w-6" />
+          Tóm Tắt Báo Cáo Phân Tích Bán
+        </CardTitle>
+        <CardDescription>
+          Tổng quan các kết quả chính và khuyến nghị từ phân tích kịch bản bán bất động sản.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="font-semibold text-gray-700 mb-1">Thời gian nắm giữ dự kiến:</p>
+            <p className="text-lg font-bold text-blue-600">{holdingYears} năm</p>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-700 mb-1">Tổng vốn đầu tư ban đầu:</p>
+            <p className="text-lg font-bold text-blue-600">{formatVND(initialInvestment)}</p>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-700 mb-1">Tổng lợi nhuận dự kiến khi bán:</p>
+            <p className={`text-lg font-bold ${totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatVND(totalReturn)}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-700 mb-1">Tổng ROI dự kiến khi bán:</p>
+            <p className={`text-lg font-bold ${totalROI >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {totalROI.toFixed(1)}%
+            </p>
+          </div>
+        </div>
+        <Separator />
+        <div>
+          <p className="font-semibold text-gray-700 mb-1 flex items-center gap-2">
+            <Award className="h-4 w-4 text-yellow-600" />
+            Thời điểm bán tối ưu:
+          </p>
+          <p className="text-base text-gray-800">
+            Dựa trên phân tích, thời điểm tối ưu để bán bất động sản này là vào{" "}
+            <span className="font-bold text-purple-600">Năm {optimalYear}</span>{" "}
+            với ROI dự kiến cao nhất là{" "}
+            <span className="font-bold text-purple-600">{optimalROI.toFixed(1)}%</span>.
+          </p>
+        </div>
+        <div className="p-3 bg-blue-100 rounded-lg flex items-start gap-3">
+          <Lightbulb className="h-5 w-5 text-blue-600 flex-shrink-0 mt-1" />
+          <div>
+            <p className="font-semibold text-blue-800">Lưu ý quan trọng:</p>
+            <p className="text-sm text-blue-700">
+              {saleAnalysis.optimalSaleTiming.reasoning}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

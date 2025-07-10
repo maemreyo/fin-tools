@@ -217,7 +217,7 @@ ${hasSaleAnalysis ? '🎯 Bao gồm Sale Analysis chi tiết' : ''}
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-7xl max-h-[95vh] w-[95vw]">
+      <DialogContent className="max-w-full max-h-[98vh] w-[98vw]">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="text-2xl font-bold flex items-center gap-3">
             <Calculator className="h-6 w-6 text-blue-600" />
