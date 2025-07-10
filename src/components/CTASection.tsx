@@ -129,7 +129,7 @@ export default function CTASection({ onGetStarted }: CTASectionProps) {
                   <Button 
                     variant="outline" 
                     size="lg"
-                    className="border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
+                    className="border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm bg-amber-700"
                   >
                     <Star className="h-5 w-5 mr-2" />
                     Xem demo

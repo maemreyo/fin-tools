@@ -1,4 +1,4 @@
-// Enhanced calculator with sale analysis integration
+// Công cụ tính toán nâng cao tích hợp phân tích kịch bản bán
 
 import { 
   RealEstateInputs, 
@@ -20,22 +20,22 @@ import {
 import { calculateRealEstateInvestment } from './real-estate-calculator';
 
 /**
- * Enhanced real estate investment calculator with sale analysis support
+ * Công cụ tính toán đầu tư bất động sản nâng cao với hỗ trợ phân tích kịch bản bán
  */
 export function calculateRealEstateInvestmentWithSale(
   inputs: RealEstateInputsWithSaleAnalysis
 ): CalculationResultWithSale {
   
-  // First, calculate base scenario using existing calculator
+  // Đầu tiên, tính toán kịch bản cơ bản bằng cách sử dụng công cụ tính toán hiện có
   const baseInputs: RealEstateInputs = {
     ...inputs,
-    // Remove sale analysis from base inputs to avoid conflicts
+    // Loại bỏ phân tích bán khỏi đầu vào cơ bản để tránh xung đột
     saleAnalysis: undefined,
   } as RealEstateInputs;
   
   const baseResult = calculateRealEstateInvestment(baseInputs);
   
-  // If sale analysis is not enabled, return base result
+  // Nếu phân tích bán không được bật, trả về kết quả cơ bản
   if (!inputs.saleAnalysis || !inputs.saleAnalysis.enableSaleAnalysis) {
     return {
       ...baseResult,
@@ -43,7 +43,7 @@ export function calculateRealEstateInvestmentWithSale(
     };
   }
   
-  // Validate sale analysis configuration
+  // Xác thực cấu hình phân tích bán
   const validation = validateSaleAnalysisConfig(inputs.saleAnalysis);
   if (!validation.isValid) {
     console.warn('Sale analysis validation failed:', validation.errors);
@@ -54,13 +54,13 @@ export function calculateRealEstateInvestmentWithSale(
     };
   }
   
-  // Add validation warnings to result
+  // Thêm cảnh báo xác thực vào kết quả
   const enhancedWarnings = [
     ...baseResult.warnings,
     ...validation.warnings,
   ];
   
-  // Calculate sale analysis
+  // Tính toán phân tích bán
   let saleAnalysis: SaleAnalysisResult;
   try {
     saleAnalysis = calculateSaleAnalysis(baseInputs, inputs.saleAnalysis);
@@ -73,7 +73,7 @@ export function calculateRealEstateInvestmentWithSale(
     };
   }
   
-  // Generate enhanced suggestions including sale recommendations
+  // Tạo các gợi ý nâng cao bao gồm các khuyến nghị bán
   const enhancedSuggestions = generateEnhancedSuggestions(
     baseResult,
     saleAnalysis,
@@ -89,7 +89,7 @@ export function calculateRealEstateInvestmentWithSale(
 }
 
 /**
- * Calculate holding period analysis for investment planning
+ * Tính toán phân tích thời gian nắm giữ cho việc lập kế hoạch đầu tư
  */
 export function calculateHoldingPeriodAnalysis(
   inputs: RealEstateInputs,
@@ -110,26 +110,26 @@ export function calculateHoldingPeriodAnalysis(
   const maxMonths = maxHoldingPeriodYears * 12;
   const { yearlyBreakdown } = calculateAccumulatedCashFlows(inputs, maxMonths, appreciationRate);
   
-  // Find optimal sale year (highest ROI)
+  // Tìm năm bán tối ưu (ROI cao nhất)
   const optimalYear = yearlyBreakdown.reduce((best, current, index) => 
     current.roiIfSoldNow > yearlyBreakdown[best].roiIfSoldNow ? index : best
   , 0) + 1;
   
-  // Find max ROI year
+  // Tìm năm ROI tối đa
   const maxROIEntry = yearlyBreakdown.reduce((best, current) => 
     current.roiIfSoldNow > best.roiIfSoldNow ? current : best
   );
   
-  // Find break-even year (when cumulative cash flow becomes positive)
+  // Tìm năm hòa vốn (khi dòng tiền tích lũy trở nên dương)
   const breakEvenEntry = yearlyBreakdown.find(entry => entry.cumulativeCashFlow > 0);
   const breakEvenYear = breakEvenEntry ? breakEvenEntry.year : maxHoldingPeriodYears;
   
-  // Calculate summary metrics
+  // Tính toán các chỉ số tóm tắt
   const lastYear = yearlyBreakdown[yearlyBreakdown.length - 1];
   const totalCashFlowReceived = lastYear?.cumulativeCashFlow || 0;
   const averageAnnualReturn = totalCashFlowReceived / maxHoldingPeriodYears;
   
-  // Risk assessment based on cash flow volatility and payback period
+  // Đánh giá rủi ro dựa trên biến động dòng tiền và thời gian hoàn vốn
   let riskAssessment: 'low' | 'medium' | 'high' = 'medium';
   if (breakEvenYear <= 5 && totalCashFlowReceived > 0) {
     riskAssessment = 'low';
@@ -151,7 +151,7 @@ export function calculateHoldingPeriodAnalysis(
 }
 
 /**
- * Generate comprehensive investment recommendations
+ * Tạo các khuyến nghị đầu tư toàn diện
  */
 function generateEnhancedSuggestions(
   baseResult: CalculationResult,

@@ -1,4 +1,4 @@
-// Sale Scenario Analysis types for Real Estate Calculator
+// Các kiểu dữ liệu cho phân tích kịch bản bán trong Công cụ tính toán bất động sản
 
 import { RealEstateInputs, CalculationResult } from "./real-estate";
 

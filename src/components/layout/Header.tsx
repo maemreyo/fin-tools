@@ -20,7 +20,7 @@ export function Header() {
               className="text-foreground/60 transition-colors hover:text-foreground/80"
               href="/calculator"
             >
-              Calculator
+              Công cụ
             </Link>
           </nav>
         </div>
@@ -30,7 +30,7 @@ export function Header() {
           </div>
           <nav className="hidden md:flex md:items-center md:gap-2">
             <Button asChild>
-              <Link href="/calculator">Get Started</Link>
+              <Link href="/calculator">Bắt đầu ngay</Link>
             </Button>
           </nav>
         </div>
@@ -38,7 +38,7 @@ export function Header() {
           <SheetTrigger asChild>
             <Button className="md:hidden" size="icon" variant="outline">
               <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
+              <span className="sr-only">Mở/Đóng Menu</span>
             </Button>
           </SheetTrigger>
           <SheetContent side="right">
@@ -48,10 +48,10 @@ export function Header() {
                 <span className="font-bold">PropertyWise</span>
               </Link>
               <Link href="/calculator" className="text-lg font-medium">
-                Calculator
+                Công cụ
               </Link>
               <Button asChild>
-                <Link href="/calculator">Get Started</Link>
+                <Link href="/calculator">Bắt đầu ngay</Link>
               </Button>
             </div>
           </SheetContent>

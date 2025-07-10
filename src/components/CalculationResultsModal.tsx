@@ -197,7 +197,7 @@ export default function CalculationResultsModal({
 ${warnings.length > 0 ? `⚠️ CẢNH BÁO:\n${warnings.join('\n')}` : ''}
 ${suggestions.length > 0 ? `💡 GỢI Ý:\n${suggestions.slice(0, 3).join('\n')}` : ''}
 
-Tạo bởi Real Estate Calculator - ${new Date().toLocaleDateString('vi-VN')}
+Tạo bởi Công cụ tính toán bất động sản - ${new Date().toLocaleDateString('vi-VN')}
     `.trim();
 
     navigator.clipboard.writeText(summary);

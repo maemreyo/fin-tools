@@ -16,7 +16,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ calculationCount, hasCur
           <div className="inline-flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-lg mb-6 border border-primary/20">
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-primary">Smart Calculator</span>
+              <span className="font-semibold text-primary">Công cụ tính toán thông minh</span>
             </div>
             <div className="h-4 w-px bg-primary/20" />
             <div className="flex items-center gap-2">
