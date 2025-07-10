@@ -151,6 +151,7 @@ export default function EnhancedRealEstateCalculatorPage() {
 
       // Auto-switch to buy now vs future mode
       setActiveFeatureMode("buy_now_vs_future");
+      handleViewResult(enhancedResult);
     } catch (error) {
       console.error("Error calculating buy now scenario:", error);
       toast.error("Lỗi khi tính toán. Vui lòng kiểm tra lại thông tin.");
@@ -240,7 +241,7 @@ export default function EnhancedRealEstateCalculatorPage() {
   };
 
   // === EXISTING HANDLERS (enhanced) ===
-  const handleEnhancedCalculate = (
+  const handleEnhancedCalculate = async (
     formData: RealEstateInputsWithSaleAnalysis
   ) => {
     setCurrentInputs(formData); // Store current inputs for future use
@@ -249,7 +250,10 @@ export default function EnhancedRealEstateCalculatorPage() {
       setPendingCalculation(formData);
       setShowCalculationConfirm(true);
     } else {
-      handleCalculate(formData);
+      const result = await handleCalculate(formData);
+      if (result) {
+        handleViewResult(result);
+      }
     }
   };
 
