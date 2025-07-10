@@ -30,20 +30,26 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Enhanced imports - UPDATED
+// Enhanced imports - UPDATED FOR SALE ANALYSIS
 import HeroSection from "@/components/HeroSection";
 import { CalculationConfirmationDialog } from "@/components/CalculationConfirmationDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { PresetScenarios } from "@/components/PresetScenarios";
 import { CalculationHistory } from "@/components/CalculationHistory";
+
+// EXISTING COMPONENTS - Keep using these
 import PropertyInputForm from "@/components/PropertyInputForm";
 import CalculationResultsModal from "@/components/CalculationResultsModal";
 
+// NEW ENHANCED COMPONENTS - Add these
+import EnhancedPropertyInputForm from "@/components/PropertyInputFormEnhanced";
+import SaleScenarioAnalysis from "@/components/SaleScenarioAnalysis";
+
 // Enhanced comparison components - UPDATED
 import EnhancedVisualComparison from "@/components/comparison/EnhancedVisualComparison";
-// REPLACE OLD: import EconomicScenarioGenerator from "@/components/comparison/EconomicScenarioGenerator";
 import EconomicScenarioGeneratorUI from "@/components/comparison/EconomicScenarioGenerator";
 
+// UPDATED IMPORTS FOR SALE ANALYSIS
 import { useCalculatorState } from "@/hooks/useCalculatorState";
 import { PRESET_SCENARIOS } from "@/constants/presetScenarios";
 import {
@@ -51,6 +57,16 @@ import {
   CalculationResult,
   PresetScenario,
 } from "@/types/real-estate";
+
+// NEW IMPORTS FOR SALE ANALYSIS
+import {
+  RealEstateInputsWithSaleAnalysis,
+  CalculationResultWithSale,
+  HoldingPeriodInputs,
+} from "@/types/sale-scenario";
+import {
+  calculateRealEstateInvestmentWithSale,
+} from "@/lib/real-estate-calculator-enhanced";
 
 // Enhanced types - NEW
 import {
@@ -77,7 +93,9 @@ export default function EnhancedRealEstateCalculatorPage() {
     null
   );
 
-  // Enhanced state - NEW
+  // Enhanced state - NEW FOR SALE ANALYSIS
+  const [useSaleAnalysis, setUseSaleAnalysis] = useState(false);
+  const [saleResults, setSaleResults] = useState<CalculationResultWithSale | null>(null);
   const [marketContext, setMarketContext] = useState<MarketContext>({
     marketType: "secondary",
     investorType: "new_investor",
@@ -98,374 +116,265 @@ export default function EnhancedRealEstateCalculatorPage() {
     setShowCalculationConfirm(true);
   };
 
+  // NEW HANDLER FOR SALE ANALYSIS
+  const handleCalculateWithSaleAnalysis = (inputs: RealEstateInputsWithSaleAnalysis) => {
+    try {
+      const result = calculateRealEstateInvestmentWithSale(inputs);
+      setSaleResults(result);
+      setCurrentInputs(inputs as RealEstateInputs);
+      
+      // Also set for legacy components
+      if (result.saleAnalysis) {
+        setSelectedResult(result);
+        setIsModalOpen(true);
+      }
+      
+      toast.success("✅ Tính toán hoàn tất với Sale Analysis!");
+      
+      // Scroll to results
+      setTimeout(() => {
+        comparisonRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      
+    } catch (error) {
+      console.error('Calculation error:', error);
+      toast.error("❌ Có lỗi trong quá trình tính toán. Vui lòng thử lại.");
+    }
+  };
+
   const handlePresetSelectWithToast = (preset: PresetScenario) => {
     handlePresetSelect(preset);
     setShowPresets(false);
 
-    toast.success("✅ Đã tải template thành công!", {
-      description: `${preset.name} - Dữ liệu đã được điền vào form`,
-      action: {
-        label: "Tính toán ngay",
-        onClick: () => {
-          if (preset.inputs) {
-            handleCalculate(preset.inputs as RealEstateInputs);
-          }
-        },
-      },
-      duration: 5000,
-    });
+    toast.success("✅ Đã tải template thành công!");
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
-  const handleResultSelect = (result: CalculationResult) => {
-    setSelectedResult(result);
-    setIsModalOpen(true);
-  };
-
-  const confirmCalculation = async () => {
+  const handleConfirmCalculation = async () => {
     if (pendingCalculation) {
-      try {
-        const result = await handleCalculate(pendingCalculation);
-        setSelectedResult(result);
-        setIsModalOpen(true);
+      const result = await handleCalculate(pendingCalculation);
+      setSelectedResult(result);
+      setIsModalOpen(true);
+      setShowCalculationConfirm(false);
+      setPendingCalculation(null);
 
-        // Auto-detect investor type based on existing history
-        if (appState.calculationHistory.length === 0) {
-          setMarketContext((prev) => ({
-            ...prev,
-            investorType: "new_investor",
-          }));
-        } else {
-          // If user has history, they might be existing investor
-          setMarketContext((prev) => ({
-            ...prev,
-            investorType: "existing_investor",
-          }));
-        }
+      toast.success("🎉 Phân tích hoàn tất! Xem kết quả chi tiết.");
 
-        // Auto-show comparison if we have multiple results
-        if (appState.calculationHistory.length >= 1) {
-          setShowComparison(true);
-          setTimeout(() => {
-            comparisonRef.current?.scrollIntoView({ behavior: "smooth" });
-          }, 500);
-        }
-      } catch (error) {
-        // Error already handled in hook
-      }
+      // Auto scroll to comparison section
+      setTimeout(() => {
+        comparisonRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     }
-    setShowCalculationConfirm(false);
-    setPendingCalculation(null);
   };
 
-  const handleScrollToForm = () => {
-    formRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // ENHANCED: Generate Economic Scenarios
-  const handleGenerateEconomicScenarios = () => {
-    if (!currentInputs) {
-      toast.error(
-        "Vui lòng thực hiện tính toán trước khi tạo kịch bản kinh tế"
-      );
-      return;
-    }
-
-    // Auto-detect context based on user behavior
-    const detectedContext: MarketContext = {
-      marketType: "secondary", // Default to secondary market
-      investorType:
-        appState.calculationHistory.length > 0
-          ? "existing_investor"
-          : "new_investor",
-      purchaseDate: new Date(),
-      currentMarketValue: currentInputs.giaTriBDS,
-    };
-
-    setMarketContext(detectedContext);
-    setShowEconomicGenerator(true);
-  };
-
-  // ENHANCED: Handle generated scenarios
-  const handleEnhancedScenariosGenerated = (
-    scenarios: EnhancedGeneratedScenario[]
-  ) => {
-    setEnhancedScenarios(scenarios);
-
-    // Convert to CalculationResult for comparison
-    const newResults = scenarios.map((s) => ({
-      ...s.result,
-      scenarioName: `${s.scenario.name} (${
-        s.marketContext.investorType === "existing_investor"
-          ? "Existing"
-          : "New"
-      } - ${s.marketContext.marketType})`,
-    }));
-
-    // Add enhanced context info to toast
-    const contextInfo =
-      marketContext.investorType === "existing_investor"
-        ? "Existing Investor"
-        : "New Investor";
-    const marketInfo =
-      marketContext.marketType === "primary"
-        ? "Primary Market"
-        : "Secondary Market";
-
-    toast.success(
-      `🎯 Đã tạo ${scenarios.length} kịch bản kinh tế thành công!`,
-      {
-        description: `Context: ${contextInfo} • ${marketInfo}`,
-        action: {
-          label: "Xem so sánh",
-          onClick: () => {
-            setShowComparison(true);
-            comparisonRef.current?.scrollIntoView({ behavior: "smooth" });
-          },
-        },
-      }
+  const handleToggleSaleAnalysis = () => {
+    setUseSaleAnalysis(!useSaleAnalysis);
+    setSaleResults(null); // Clear previous results when switching modes
+    
+    toast.info(
+      useSaleAnalysis 
+        ? "Chuyển về chế độ tính toán cơ bản" 
+        : "🚀 Chuyển sang chế độ Sale Analysis - Enhanced!"
     );
-
-    setShowComparison(true);
-  };
-
-  const handleAddToComparison = (results: CalculationResult[]) => {
-    // This would need to be implemented in useCalculatorState hook
-    toast.success(`📊 Đã thêm ${results.length} kịch bản vào so sánh!`);
-    setShowComparison(true);
-  };
-
-  // Smart context detection based on user inputs
-  const getSmartContextSuggestion = (): string => {
-    if (!currentInputs) return "";
-
-    const suggestions = [];
-
-    if (appState.calculationHistory.length > 0) {
-      suggestions.push("Bạn có vẻ là existing investor");
-    } else {
-      suggestions.push("Bạn có vẻ là new investor");
-    }
-
-    if ((currentInputs.giaTriBDS || 0) > 3000000000) {
-      suggestions.push("property cao cấp → secondary market");
-    } else {
-      suggestions.push("có thể mua từ CĐT → primary market");
-    }
-
-    return suggestions.join(", ");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      {/* ===== HERO SECTION ===== */}
-      <HeroSection
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Page Header */}
+      <PageHeader 
         calculationCount={appState.calculationHistory.length}
-        hasCurrentResult={!!appState.currentResult}
-        onScrollToForm={handleScrollToForm}
+        hasCurrentResult={!!selectedResult || !!saleResults}
       />
 
-      {/* ===== MAIN CONTENT ===== */}
-      <div className="container mx-auto py-8 space-y-8">
-        {/* ===== FORM SECTION ===== */}
-        <div ref={formRef} data-form="property-input">
-          <PropertyInputForm
-            onCalculate={handleCalculateWithConfirm}
-            initialValues={appState.selectedPreset?.inputs}
-            selectedPreset={appState.selectedPreset}
-            isLoading={appState.isCalculating}
-          />
-        </div>
+      {/* Hero Section */}
+      <HeroSection onScrollToForm={() => formRef.current?.scrollIntoView({ behavior: "smooth" })} />
 
-        {/* ===== PRESETS & HISTORY (COLLAPSIBLE) ===== */}
-        <Collapsible open={showPresets} onOpenChange={setShowPresets}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <span className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4" />
-                {showPresets
-                  ? "Ẩn templates và lịch sử"
-                  : "Hiện templates và lịch sử"}
-              </span>
-              {showPresets ? (
-                <ChevronUp className="h-4 w-4" />
+      {/* Main Content Container */}
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        
+        {/* Mode Toggle Section */}
+        <div className="text-center">
+          <div className="inline-flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm border">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-blue-600" />
+              <span className="font-medium">Chế độ tính toán:</span>
+            </div>
+            <Button
+              variant={useSaleAnalysis ? "default" : "outline"}
+              onClick={handleToggleSaleAnalysis}
+              className="flex items-center gap-2"
+            >
+              {useSaleAnalysis ? (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Sale Analysis Mode
+                  <Badge variant="secondary">Enhanced</Badge>
+                </>
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <>
+                  <Calculator className="h-4 w-4" />
+                  Basic Mode
+                </>
               )}
             </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-8 mt-4">
+          </div>
+          {useSaleAnalysis && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Phân tích chi tiết kịch bản bán bất động sản với dự phóng ROI và thời điểm tối ưu
+            </p>
+          )}
+        </div>
+
+        {/* Preset Scenarios Section */}
+        <Collapsible open={showPresets} onOpenChange={setShowPresets}>
+          <div className="text-center">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="lg" className="mb-4">
+                <Building className="mr-2 h-4 w-4" />
+                Template Scenarios
+                {showPresets ? (
+                  <ChevronUp className="ml-2 h-4 w-4" />
+                ) : (
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent>
             <PresetScenarios
               scenarios={PRESET_SCENARIOS}
-              selectedPreset={appState.selectedPreset}
               onPresetSelect={handlePresetSelectWithToast}
+              selectedPreset={appState.selectedPreset || null}
               onHide={() => setShowPresets(false)}
-            />
-
-            <CalculationHistory
-              history={appState.calculationHistory}
-              onResultSelect={handleResultSelect}
-              onToggleComparison={() => setShowComparison(!showComparison)}
             />
           </CollapsibleContent>
         </Collapsible>
 
-        {/* ===== ENHANCED COMPARISON SECTION ===== */}
-        {appState.calculationHistory.length > 0 && (
-          <div ref={comparisonRef} className="space-y-6">
-            {/* Enhanced Comparison Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-                <h2 className="text-xl font-semibold">
-                  Enhanced So Sánh Kịch Bản
-                </h2>
-                {enhancedScenarios.length > 0 && (
-                  <Badge className="bg-purple-100 text-purple-800">
-                    {enhancedScenarios.length} enhanced scenarios
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleGenerateEconomicScenarios}
-                  disabled={!currentInputs}
-                  className="flex items-center gap-2"
-                >
-                  <Brain className="h-4 w-4" />
-                  Enhanced Economic Scenarios
-                  {currentInputs && (
-                    <Badge variant="secondary" className="ml-1">
-                      {marketContext.investorType === "existing_investor"
-                        ? "Existing"
-                        : "New"}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowComparison(!showComparison)}
-                >
-                  {showComparison ? "Ẩn so sánh" : "Hiện so sánh"}
-                </Button>
-              </div>
-            </div>
+        {/* Input Form Section */}
+        <div ref={formRef} className="scroll-mt-20">
+          {useSaleAnalysis ? (
+            // NEW ENHANCED FORM WITH SALE ANALYSIS
+            <EnhancedPropertyInputForm
+              onCalculate={handleCalculateWithSaleAnalysis}
+              isLoading={false}
+              selectedPreset={appState.selectedPreset || null}
+            />
+          ) : (
+            // EXISTING BASIC FORM
+            <PropertyInputForm
+              onCalculate={handleCalculateWithConfirm}
+              isLoading={false}
+              selectedPreset={appState.selectedPreset || null}
+            />
+          )}
+        </div>
 
-            {/* Smart Context Suggestion */}
-            {currentInputs && (
-              <Alert className="border-blue-200 bg-blue-50">
-                <Brain className="h-4 w-4" />
-                <AlertDescription className="text-blue-800">
-                  <strong>🤖 Smart Detection:</strong>{" "}
-                  {getSmartContextSuggestion()}
-                  <Button
-                    variant="link"
-                    className="p-0 ml-2 text-blue-600 underline h-auto"
-                    onClick={handleGenerateEconomicScenarios}
-                  >
-                    Tạo kịch bản phù hợp →
+        {/* Results Section */}
+        {(selectedResult || saleResults) && (
+          <div ref={comparisonRef} className="scroll-mt-20 space-y-8">
+            
+            {/* Sale Analysis Results */}
+            {saleResults && saleResults.saleAnalysis && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    🎯 Sale Scenario Analysis
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Phân tích chi tiết kịch bản bán bất động sản
+                  </p>
+                </div>
+                <SaleScenarioAnalysis result={saleResults} />
+              </div>
+            )}
+
+            {/* Economic Scenarios Section */}
+            <Collapsible open={showEconomicGenerator} onOpenChange={setShowEconomicGenerator}>
+              <div className="text-center">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="lg" className="mb-4">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Economic Scenarios Analysis
+                    {showEconomicGenerator ? (
+                      <ChevronUp className="ml-2 h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    )}
                   </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {showComparison && (
-              <EnhancedVisualComparison
-                scenarios={appState.calculationHistory}
-                onSelectScenario={(scenario) => {
-                  setSelectedResult(scenario);
-                  setIsModalOpen(true);
-                }}
-                onRemoveScenario={(index) => {
-                  // This would require updating the useCalculatorState hook
-                  toast.success("Đã xóa kịch bản khỏi so sánh");
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* ===== ENHANCED QUICK ACTIONS ===== */}
-        {appState.calculationHistory.length > 0 && (
-          <div className="flex justify-center">
-            <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm border">
-              <div className="text-sm text-muted-foreground">
-                Bạn có {appState.calculationHistory.length} kịch bản
-                {enhancedScenarios.length > 0 && (
-                  <span className="text-purple-600">
-                    {" "}
-                    + {enhancedScenarios.length} enhanced
-                  </span>
-                )}
+                </CollapsibleTrigger>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowComparison(true)}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                So sánh tất cả
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateEconomicScenarios}
-                disabled={!currentInputs}
-                className="flex items-center gap-2"
-              >
-                <Brain className="h-4 w-4" />
-                Enhanced Scenarios
+              <CollapsibleContent>
                 {currentInputs && (
-                  <Badge variant="secondary" className="text-xs">
-                    Auto-detected
-                  </Badge>
+                  <EconomicScenarioGeneratorUI
+                    inputs={currentInputs}
+                    onScenariosGenerated={setEnhancedScenarios}
+                    onAddToComparison={(results) => {
+                      // This would typically add to appState.calculationHistory or a dedicated comparison state
+                      // For now, just show a toast
+                      toast.success(`📊 Đã thêm ${results.length} kịch bản vào so sánh!`);
+                      setShowComparison(true); // Assuming you want to show comparison after adding
+                    }}
+                    isOpen={showEconomicGenerator}
+                    onClose={() => setShowEconomicGenerator(false)}
+                  />
                 )}
-              </Button>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Enhanced Comparison Section */}
+            <Collapsible open={showComparison} onOpenChange={setShowComparison}>
+              <div className="text-center">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="lg" className="mb-4">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Advanced Comparison
+                    {showComparison ? (
+                      <ChevronUp className="ml-2 h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent>
+                {enhancedScenarios.length > 0 && (
+                  <EnhancedVisualComparison
+                    scenarios={enhancedScenarios.map((s) => s.result)}
+                    onSelectScenario={(result) => {
+                      setSelectedResult(result);
+                      setIsModalOpen(true);
+                    }}
+                  />
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+
           </div>
         )}
 
-        {/* ===== SUCCESS MESSAGE WITH CONTEXT ===== */}
-        {appState.currentResult && (
-          <Alert className="border-green-200 bg-green-50">
-            <Sparkles className="h-4 w-4" />
-            <AlertDescription className="text-green-800">
-              <strong>🎉 Tính toán thành công!</strong> Kết quả đã được lưu vào
-              lịch sử.
-              {appState.calculationHistory.length > 1 && (
-                <span>
-                  {" "}
-                  Bạn có thể so sánh với{" "}
-                  {appState.calculationHistory.length - 1} kịch bản khác.
-                </span>
-              )}
-              {currentInputs && (
-                <Button
-                  variant="link"
-                  className="p-0 ml-2 text-green-700 underline h-auto"
-                  onClick={handleGenerateEconomicScenarios}
-                >
-                  Tạo enhanced scenarios →
-                </Button>
-              )}
-            </AlertDescription>
-          </Alert>
+        {/* Calculation History */}
+        {appState.calculationHistory.length > 0 && (
+          <CalculationHistory
+            history={appState.calculationHistory}
+            onResultSelect={(result) => {
+              setSelectedResult(result);
+              setIsModalOpen(true);
+            }}
+            onToggleComparison={() => setShowComparison(!showComparison)}
+          />
         )}
+
       </div>
 
-      {/* ===== MODALS ===== */}
-      <CalculationResultsModal
-        result={selectedResult}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onNewCalculation={() => setIsModalOpen(false)}
-      />
-
+      {/* Modals */}
+      {/* Calculation Confirmation Dialog */}
       <CalculationConfirmationDialog
         isOpen={showCalculationConfirm}
         onOpenChange={setShowCalculationConfirm}
         pendingCalculation={pendingCalculation}
-        onConfirm={confirmCalculation}
+        onConfirm={handleConfirmCalculation}
         onCancel={() => {
           setShowCalculationConfirm(false);
           setPendingCalculation(null);
@@ -473,14 +382,21 @@ export default function EnhancedRealEstateCalculatorPage() {
         isCalculating={appState.isCalculating}
       />
 
-      {/* ENHANCED: Economic Scenario Generator */}
-      <EconomicScenarioGeneratorUI
-        baseInputs={currentInputs || ({} as RealEstateInputs)}
-        onScenariosGenerated={handleEnhancedScenariosGenerated}
-        onAddToComparison={handleAddToComparison}
-        isOpen={showEconomicGenerator}
-        onClose={() => setShowEconomicGenerator(false)}
+      {/* Results Modal */}
+      <CalculationResultsModal
+        result={selectedResult}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedResult(null);
+        }}
+        onNewCalculation={() => {
+          setIsModalOpen(false);
+          setSelectedResult(null);
+          formRef.current?.scrollIntoView({ behavior: "smooth" });
+        }}
       />
+
     </div>
   );
 }

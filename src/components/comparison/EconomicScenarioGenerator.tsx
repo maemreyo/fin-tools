@@ -84,7 +84,7 @@ import {
 
 // ===== INTERFACES =====
 interface EnhancedEconomicScenarioGeneratorProps {
-  baseInputs: RealEstateInputs;
+  inputs: RealEstateInputs;
   onScenariosGenerated: (scenarios: EnhancedGeneratedScenario[]) => void;
   onAddToComparison: (results: CalculationResult[]) => void;
   isOpen: boolean;
@@ -93,7 +93,7 @@ interface EnhancedEconomicScenarioGeneratorProps {
 
 // ===== MAIN COMPONENT =====
 export default function EnhancedEconomicScenarioGeneratorUI({
-  baseInputs,
+  inputs,
   onScenariosGenerated,
   onAddToComparison,
   isOpen,
@@ -109,7 +109,7 @@ export default function EnhancedEconomicScenarioGeneratorUI({
     marketType: 'secondary',
     investorType: 'new_investor',
     purchaseDate: new Date(),
-    currentMarketValue: baseInputs.giaTriBDS
+    currentMarketValue: inputs.giaTriBDS
   });
 
   // ===== CUSTOM SCENARIO STATE =====
@@ -125,16 +125,13 @@ export default function EnhancedEconomicScenarioGeneratorUI({
 
   // ===== MARKET CONTEXT DETECTION =====
   const suggestedContext = useMemo(() => {
-    const propertyValue = baseInputs.giaTriBDS || 0;
+    const propertyValue = inputs.giaTriBDS || 0;
     const suggestions = [];
 
     // Auto-detect likely investor type based on inputs
-    if (baseInputs.scenarioName?.includes('existing') || 
-        baseInputs.scenarioName?.includes('đã mua')) {
-      suggestions.push('existing_investor');
-    } else {
-      suggestions.push('new_investor');
-    }
+    // Removed scenarioName check as it's not part of RealEstateInputs
+    // For now, default to new_investor or add more sophisticated detection if needed
+    suggestions.push('new_investor');
 
     // Auto-detect market type based on property characteristics
     if (propertyValue > 5000000000) { // > 5 tỷ likely secondary
@@ -144,7 +141,7 @@ export default function EnhancedEconomicScenarioGeneratorUI({
     }
 
     return suggestions;
-  }, [baseInputs]);
+  }, [inputs]);
 
   // ===== HANDLERS =====
   const handleGenerateScenarios = async () => {
@@ -156,7 +153,7 @@ export default function EnhancedEconomicScenarioGeneratorUI({
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const scenarios = EnhancedEconomicScenarioGenerator.generateEnhancedScenarios(
-        baseInputs,
+        inputs,
         marketContext,
         selectedScenarios
       );
@@ -858,9 +855,7 @@ export default function EnhancedEconomicScenarioGeneratorUI({
                     <p className="text-sm text-muted-foreground mb-4">
                       Set your market context và chọn scenarios để bắt đầu analysis
                     </p>
-                    <Button onClick={() => setActiveTab('context')}>
-                      Set Market Context
-                    </Button>
+                    
                   </CardContent>
                 </Card>
               )}
