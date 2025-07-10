@@ -201,7 +201,7 @@ export default function EnhancedRealEstateCalculatorPage() {
   /**
    * Prepare data for enhanced comparison
    */
-  const prepareComparisonData = (): CalculationResult[] => {
+  const prepareComparisonData = (): CalculationResultWithSale[] => {
     const comparisonResults: CalculationResult[] = [];
 
     // Add buy now result

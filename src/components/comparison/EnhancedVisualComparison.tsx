@@ -69,7 +69,7 @@ import { Label } from "@/components/ui/label";
 
 // ===== ENHANCED INTERFACES =====
 interface EnhancedVisualComparisonProps {
-  scenarios: CalculationResult[];
+  scenarios: CalculationResultWithSale[];
   onSelectScenario?: (scenario: CalculationResult) => void;
   onRemoveScenario?: (index: number) => void;
   showRecommendation?: boolean; // 🆕 Show overall recommendation
@@ -78,7 +78,7 @@ interface EnhancedVisualComparisonProps {
 
 // ===== ENHANCED SCENARIO PROPERTY INTERFACE =====
 interface EnhancedScenarioProperty {
-  scenario: CalculationResult;
+  scenario: CalculationResultWithSale;
   scenarioIndex: number;
   rank: number;
   scores: {
@@ -273,7 +273,7 @@ export default function EnhancedVisualComparison({
 
   // ===== ENHANCED SCENARIO ANALYSIS =====
   const enhancedProperties = useMemo((): EnhancedScenarioProperty[] => {
-    return scenarios.map((scenario, index) => {
+    return scenarios.map((scenario: CalculationResultWithSale, index) => {
       const scenarioType = getScenarioType(scenario);
 
       // Calculate scores
@@ -420,26 +420,28 @@ export default function EnhancedVisualComparison({
 
     let recommendation = "";
     let recommendedStrategy: "buy_now" | "buy_future" | "mixed" = "mixed";
+    const reasoning: string[] = [];
 
     if (bestBuyNow && bestBuyFuture) {
       if (bestBuyNow.scores.overall > bestBuyFuture.scores.overall) {
-        recommendation = `Mua ngay có lợi hơn với điểm số ${bestBuyNow.scores.overall.toFixed(
-          0
-        )} so với ${bestBuyFuture.scores.overall.toFixed(0)}`;
         recommendedStrategy = "buy_now";
+        recommendation = `Kịch bản "Mua Ngay" có lợi hơn với điểm số tổng thể ${bestBuyNow.scores.overall.toFixed(0)} so với ${bestBuyFuture.scores.overall.toFixed(0)} của kịch bản "Mua Tương Lai".`;
+        reasoning.push(`ROI hàng năm của "Mua Ngay" là ${formatSafePercent(bestBuyNow.scenario.roiHangNam)} so với ${formatSafePercent(bestBuyFuture.scenario.roiHangNam)} của "Mua Tương Lai".`);
+        reasoning.push(`Dòng tiền ròng hàng tháng của "Mua Ngay" là ${formatSafeVND(bestBuyNow.scenario.steps.dongTienRongBDS)} so với ${formatSafeVND(bestBuyFuture.scenario.steps.dongTienRongBDS)} của "Mua Tương Lai".`);
       } else {
-        recommendation = `Mua tương lai có lợi hơn với điểm số ${bestBuyFuture.scores.overall.toFixed(
-          0
-        )} so với ${bestBuyNow.scores.overall.toFixed(0)}`;
         recommendedStrategy = "buy_future";
+        recommendation = `Kịch bản "Mua Tương Lai" có lợi hơn với điểm số tổng thể ${bestBuyFuture.scores.overall.toFixed(0)} so với ${bestBuyNow.scores.overall.toFixed(0)} của kịch bản "Mua Ngay".`;
+        reasoning.push(`ROI hàng năm của "Mua Tương Lai" là ${formatSafePercent(bestBuyFuture.scenario.roiHangNam)} so với ${formatSafePercent(bestBuyNow.scenario.roiHangNam)} của "Mua Ngay".`);
+        reasoning.push(`Dòng tiền ròng hàng tháng của "Mua Tương Lai" là ${formatSafeVND(bestBuyFuture.scenario.steps.dongTienRongBDS)} so với ${formatSafeVND(bestBuyNow.scenario.steps.dongTienRongBDS)} của "Mua Ngay".`);
+        if (bestBuyFuture.purchaseTimingInfo?.monthsFromNow) {
+          reasoning.push(`Kịch bản "Mua Tương Lai" này dự kiến mua sau ${bestBuyFuture.purchaseTimingInfo.monthsFromNow} tháng, dưới tác động của kịch bản kinh tế ${bestBuyFuture.economicScenarioInfo?.name || 'không xác định'}.`);
+        }
       }
     } else if (bestBuyNow && !bestBuyFuture) {
-      recommendation =
-        "Chỉ có kịch bản mua ngay - cần tạo kịch bản mua tương lai để so sánh";
+      recommendation = `Chỉ có kịch bản "Mua Ngay" được tính toán. Để có phân tích toàn diện, vui lòng tạo thêm kịch bản "Mua Tương Lai".`;
       recommendedStrategy = "buy_now";
     } else if (!bestBuyNow && bestBuyFuture) {
-      recommendation =
-        "Chỉ có kịch bản mua tương lai - cần tạo kịch bản mua ngay để so sánh";
+      recommendation = `Chỉ có kịch bản "Mua Tương Lai" được tính toán. Để có phân tích toàn diện, vui lòng tạo thêm kịch bản "Mua Ngay".`;
       recommendedStrategy = "buy_future";
     }
 
@@ -450,6 +452,7 @@ export default function EnhancedVisualComparison({
       bestBuyFuture,
       recommendation,
       recommendedStrategy,
+      reasoning,
     };
   }, [sortedProperties, comparisonMode]);
 
@@ -553,12 +556,88 @@ export default function EnhancedVisualComparison({
         </Card>
 
         {/* Buy Now vs Future Summary */}
+        {comparisonMode === "buy_now_vs_future" && sortedProperties.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Tổng Quan So Sánh
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Kịch bản
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ROI Tổng thể
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Dòng tiền ròng/tháng
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Vốn ban đầu
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tổng lợi nhuận
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thời điểm mua
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Kịch bản kinh tế
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedProperties.map((p) => (
+                      <tr key={p.scenario.calculationId}>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {getScenarioTypeBadge(p.scenarioType)}
+                            {p.scenario.scenarioName}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                          {formatSafePercent(p.scenario.saleAnalysis?.totalROIOnSale)}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                          {formatSafeVND(p.scenario.steps.dongTienRongBDS)}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                          {formatSafeVND(p.scenario.steps.tongVonBanDau)}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                          {formatSafeVND(p.scenario.saleAnalysis?.totalReturn)}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                          {p.purchaseTimingInfo?.purchaseDate ? format(p.purchaseTimingInfo.purchaseDate, "dd/MM/yyyy", { locale: vi }) : "N/A"}
+                          {p.purchaseTimingInfo?.monthsFromNow !== undefined && p.purchaseTimingInfo.monthsFromNow > 0 && (
+                            <span className="block text-xs text-blue-600">({p.purchaseTimingInfo.monthsFromNow} tháng nữa)</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                          {p.economicScenarioInfo?.name || "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Buy Now vs Future Summary */}
         {comparisonMode === "buy_now_vs_future" && buyNowVsFutureAnalysis && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
-                Tóm Tắt So Sánh
+                Tóm Tắt Khuyến Nghị
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -948,6 +1027,13 @@ export default function EnhancedVisualComparison({
                           <p className="text-sm text-blue-700">
                             {buyNowVsFutureAnalysis.recommendation}
                           </p>
+                          {buyNowVsFutureAnalysis.reasoning.length > 0 && (
+                            <ul className="list-disc list-inside text-sm text-blue-700 mt-2">
+                              {buyNowVsFutureAnalysis.reasoning.map((reason, i) => (
+                                <li key={i}>{reason}</li>
+                              ))}
+                            </ul>
+                          )}
 
                           {buyNowVsFutureAnalysis.bestBuyNow &&
                             buyNowVsFutureAnalysis.bestBuyFuture && (
