@@ -112,6 +112,7 @@ export interface CalculationSteps {
   soTienVay: number;
   vonTuCo: number;
   tongVonBanDau: number;
+  baoHiemKhoanVayThucTe: number;
 
   // Bước 2: Chi phí vận hành hàng tháng
   tienTraNHThang: number; // Động theo giai đoạn ưu đãi/thả nổi

@@ -248,20 +248,7 @@ export default function EnhancedRealEstateCalculatorPage() {
         {/* Results Section */}
         {(selectedResult || saleResults) && (
           <div ref={comparisonRef} className="scroll-mt-20 space-y-8">
-            {/* Sale Analysis Results */}
-            {saleResults && saleResults.saleAnalysis && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    🎯 Sale Scenario Analysis
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Phân tích chi tiết kịch bản bán bất động sản
-                  </p>
-                </div>
-                <SaleScenarioAnalysis result={saleResults} />
-              </div>
-            )}
+            
 
             {/* Economic Scenarios Section */}
             <Collapsible

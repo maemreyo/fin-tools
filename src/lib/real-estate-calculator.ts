@@ -91,16 +91,14 @@ export function calculateRealEstateInvestment(inputs: RealEstateInputs): Calcula
  * BƯỚC 1: Tính Tổng Vốn Đầu Tư Ban Đầu
  * ✅ FIXED: Added safe math operations
  */
-function calculateInitialInvestment(inputs: RealEstateInputs): Pick<CalculationSteps, 'soTienVay' | 'vonTuCo' | 'tongVonBanDau'> {
-  // Safe math operations với fallbacks
+function calculateInitialInvestment(inputs: RealEstateInputs): Pick<CalculationSteps, 'soTienVay' | 'vonTuCo' | 'tongVonBanDau' | 'baoHiemKhoanVayThucTe'> {
   const giaTriBDS = Number(inputs.giaTriBDS) || 0;
-  const tyLeVay = Number(inputs.tyLeVay) || 0;
+  const vonTuCoInput = Number(inputs.vonTuCo) || 0;
   const chiPhiTrangBi = Number(inputs.chiPhiTrangBi) || 0;
   const chiPhiMua = Number(inputs.chiPhiMua) || 0;
   const baoHiemKhoanVay = Number(inputs.baoHiemKhoanVay) || 0;
-  
-  const soTienVay = giaTriBDS * (tyLeVay / 100);
-  const vonTuCo = Math.max(0, giaTriBDS - soTienVay); // Ensure non-negative
+
+  const soTienVay = Math.max(0, giaTriBDS - vonTuCoInput);
   
   // Chi phí mua là % của giá trị BĐS
   const chiPhiMuaThucTe = giaTriBDS * (chiPhiMua / 100);
@@ -108,12 +106,13 @@ function calculateInitialInvestment(inputs: RealEstateInputs): Pick<CalculationS
   // Bảo hiểm khoản vay là % của số tiền vay
   const baoHiemKhoanVayThucTe = soTienVay * (baoHiemKhoanVay / 100);
   
-  const tongVonBanDau = vonTuCo + chiPhiTrangBi + chiPhiMuaThucTe + baoHiemKhoanVayThucTe;
+  const tongVonBanDau = vonTuCoInput + chiPhiTrangBi + chiPhiMuaThucTe + baoHiemKhoanVayThucTe;
   
   return {
     soTienVay: Number(soTienVay) || 0,
-    vonTuCo: Number(vonTuCo) || 0,
-    tongVonBanDau: Number(tongVonBanDau) || 0
+    vonTuCo: Number(vonTuCoInput) || 0,
+    tongVonBanDau: Number(tongVonBanDau) || 0,
+    baoHiemKhoanVayThucTe: Number(baoHiemKhoanVayThucTe) || 0,
   };
 }
 

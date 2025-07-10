@@ -418,6 +418,11 @@ ${hasSaleAnalysis ? '🎯 Bao gồm Sale Analysis chi tiết' : ''}
                               <span>{formatVND((inputs.giaTriBDS || 0) * ((inputs.chiPhiMua || 0) / 100))}</span>
                             </div>
                             <Separator />
+                            <div className="flex justify-between">
+                              <span>Bảo hiểm khoản vay:</span>
+                              <span>{formatVND(steps.baoHiemKhoanVayThucTe || 0)}</span>
+                            </div>
+                            <Separator />
                             <div className="flex justify-between font-semibold">
                               <span>Tổng vốn ban đầu:</span>
                               <span>{formatVND(steps.tongVonBanDau || 0)}</span>
@@ -440,6 +445,14 @@ ${hasSaleAnalysis ? '🎯 Bao gồm Sale Analysis chi tiết' : ''}
                             <div className="flex justify-between">
                               <span>Chi phí bảo trì:</span>
                               <span>{formatVND(steps.chiPhiBaoTriThang || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Dự phòng CapEx:</span>
+                              <span>{formatVND(steps.duPhongCapExThang || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Bảo hiểm tài sản:</span>
+                              <span>{formatVND(steps.baoHiemTaiSanThang || 0)}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between font-semibold">
