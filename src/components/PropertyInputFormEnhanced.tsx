@@ -110,12 +110,16 @@ const enhancedRealEstateSchema = z.object({
   thuNhapKhac: z.number().optional().default(0),
   chiPhiSinhHoat: z.number().optional().default(0),
 
-  // Sale Analysis Fields
-  enableSaleAnalysis: z.boolean().optional().default(false),
-  holdingPeriodMonths: z.number().optional().default(60),
-  propertyAppreciationRate: z.number().optional().default(5),
-  sellingCostPercentage: z.number().optional().default(3),
-  saleDate: z.date().optional(),
+  // Sale Analysis Fields (Nested)
+  saleAnalysis: z
+    .object({
+      enableSaleAnalysis: z.boolean().optional().default(false),
+      holdingPeriodMonths: z.number().optional().default(60),
+      propertyAppreciationRate: z.number().optional().default(5),
+      sellingCostPercentage: z.number().optional().default(3),
+      saleDate: z.date().optional(),
+    })
+    .optional(),
 });
 
 // ===== ENHANCED PROPS INTERFACE =====
