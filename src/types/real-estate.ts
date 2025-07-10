@@ -1,17 +1,22 @@
+import { CalculationResultWithSale } from "./sale-scenario";
+
 /**
  * Interface cho toàn bộ thông số đầu vào tính toán BĐS
  * Dựa trên tài liệu "Phân Tích Sâu Logic & Công Thức Tính Dòng Tiền Bất Động Sản"
  */
 export interface RealEstateInputs {
-  // === GIAO DỊCH ===
-  /** Giá mua bán chính thức của BĐS (VND) - Bắt buộc */
+  // === THÔNG TIN GIAO DỊCH ===
+  /** Giá trị bất động sản (VND) - Bắt buộc */
   giaTriBDS: number;
 
-  /** Số tiền góp vốn tự có (VND) */
+  /** Vốn tự có ban đầu (VND) - Bắt buộc */
   vonTuCo: number;
 
-  /** Chi phí nội thất, sửa chữa ban đầu để có thể ở hoặc cho thuê (VND) */
+  /** Chi phí trang bị bổ sung (nội thất, sửa chữa) (VND) */
   chiPhiTrangBi: number;
+
+  /** 🆕 Ngày mua dự kiến/thực tế - for future scenario analysis */
+  purchaseDate?: Date;
 
   // === VỐN BAN ĐẦU ===
   /** Tỷ lệ vay trên GiaTriBDS (%) - Mặc định 70% */
@@ -77,6 +82,7 @@ export interface RealEstateInputs {
 export const DEFAULT_VALUES: Partial<RealEstateInputs> = {
   // Giao dịch
   chiPhiTrangBi: 0,
+  purchaseDate: undefined, // 🆕 Will be set dynamically
 
   // Vốn ban đầu
   tyLeVay: 70,
@@ -103,6 +109,34 @@ export const DEFAULT_VALUES: Partial<RealEstateInputs> = {
   thueSuatChoThue: 10,
   chiPhiBan: 3,
 };
+
+/**
+ * 🆕 Helper type for scenario creation
+ */
+export interface CreateFutureScenarioRequest {
+  scenarioName: string;
+  futureTimeMonths: number;
+  economicScenarioId: string;
+  originalInputs: RealEstateInputs;
+  maintainEquityRatio: boolean;
+  notes?: string;
+}
+
+/**
+ * 🆕 Validation rules for future scenarios
+ */
+export const FUTURE_SCENARIO_VALIDATION = {
+  futureTimeMonths: {
+    min: 1, // Minimum 1 month
+    max: 120, // Maximum 10 years
+    recommended: { min: 6, max: 60 }, // 6 months to 5 years
+  },
+  scenarioName: {
+    minLength: 3,
+    maxLength: 100,
+  },
+  maxScenarios: 10, // Maximum number of future scenarios to compare
+} as const;
 
 /**
  * Kết quả tính toán từng bước
@@ -133,6 +167,9 @@ export interface CalculationSteps {
 /**
  * Kết quả tính toán toàn diện
  */
+/**
+ * Enhanced Calculation Result with scenario metadata
+ */
 export interface CalculationResult {
   inputs: RealEstateInputs;
   steps: CalculationSteps;
@@ -146,12 +183,147 @@ export interface CalculationResult {
   warnings: string[];
   suggestions: string[];
 
-  // Metadata
+  // Enhanced metadata for scenario comparison
   calculatedAt: string;
   calculationId?: string;
   scenarioName?: string;
 
+  /** 🆕 Scenario type for comparison */
+  scenarioType?: "buy_now" | "buy_future";
+
+  /** 🆕 Economic scenario applied (if any) */
+  economicScenarioApplied?: {
+    id: string;
+    name: string;
+    description: string;
+  };
+
+  /** 🆕 Purchase timing info */
+  purchaseTimingInfo?: {
+    purchaseDate: Date;
+    monthsFromNow?: number;
+    projectionYears?: number;
+  };
+
   rentalYield: number; // Thu nhập từ thuê (%)
+}
+
+/**
+ * 🆕 Future Scenario Definition
+ * Represents a "buy in future" scenario with projected inputs and results
+ */
+export interface FutureScenario {
+  /** Unique identifier */
+  id: string;
+
+  /** User-friendly scenario name */
+  scenarioName: string;
+
+  /** Future purchase date */
+  futureDate: Date;
+
+  /** Number of months from current date */
+  monthsFromNow: number;
+
+  /** Economic scenario applied for projection */
+  economicScenario: {
+    id: string;
+    name: string;
+    description: string;
+    probability: number;
+  };
+
+  /** Original inputs (current market conditions) */
+  originalInputs: RealEstateInputs;
+
+  /** Projected inputs for future purchase */
+  projectedInputs: RealEstateInputs;
+
+  /** Calculation result using projected inputs */
+  result: CalculationResultWithSale;
+
+  /** Projection summary */
+  projectionSummary: {
+    propertyValueChange: number; // %
+    rentalIncomeChange: number; // %
+    interestRateChange: number; // % points
+    projectionWarnings: string[];
+  };
+
+  /** Creation metadata */
+  createdAt: Date;
+  updatedAt?: Date;
+
+  /** User notes */
+  notes?: string;
+}
+
+/**
+ * 🆕 Buy Now vs Future Comparison
+ * Comprehensive comparison between current purchase and future scenarios
+ */
+export interface BuyNowVsFutureComparison {
+  /** "Buy Now" scenario result */
+  buyNowScenario: {
+    result: CalculationResultWithSale;
+    inputs: RealEstateInputs;
+  };
+
+  /** Array of future scenarios to compare */
+  futureScenarios: FutureScenario[];
+
+  /** Comparison analysis */
+  comparisonAnalysis: {
+    /** Best scenario by ROI */
+    bestByROI: {
+      scenarioType: "buy_now" | "buy_future";
+      scenarioId?: string;
+      roi: number;
+      advantage: string;
+    };
+
+    /** Best by total return */
+    bestByTotalReturn: {
+      scenarioType: "buy_now" | "buy_future";
+      scenarioId?: string;
+      totalReturn: number;
+      advantage: string;
+    };
+
+    /** Best by cash flow */
+    bestByCashFlow: {
+      scenarioType: "buy_now" | "buy_future";
+      scenarioId?: string;
+      monthlyCashFlow: number;
+      advantage: string;
+    };
+
+    /** Risk assessment */
+    riskAssessment: {
+      buyNowRisk: "low" | "medium" | "high";
+      futureRisks: {
+        scenarioId: string;
+        riskLevel: "low" | "medium" | "high";
+        riskFactors: string[];
+      }[];
+    };
+
+    /** Overall recommendation */
+    recommendation: {
+      preferredStrategy: "buy_now" | "wait_and_buy_future" | "mixed_approach";
+      reasoning: string[];
+      keyFactors: string[];
+      actionItems: string[];
+    };
+  };
+
+  /** Analysis metadata */
+  analysisDate: Date;
+  marketContext: {
+    marketType: "primary" | "secondary";
+    investorType: "new_investor" | "existing_investor";
+    currentMarketConditions: string;
+  };
 }
 
 /**
@@ -223,3 +395,11 @@ export enum SuggestionType {
   REDUCE_EXPENSES = "reduce_expenses",
   CONSIDER_DIFFERENT_PROPERTY = "consider_different_property",
 }
+
+/**
+ * Re-export enhanced types for compatibility
+ */
+export type {
+  RealEstateInputsWithSaleAnalysis,
+  CalculationResultWithSale,
+} from "./sale-scenario";

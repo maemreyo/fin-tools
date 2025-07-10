@@ -1,10 +1,9 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { History, BarChart3 } from 'lucide-react';
-import { CalculationResult } from '@/types/real-estate';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { History, BarChart3 } from "lucide-react";
+import { CalculationResult } from "@/types/real-estate";
 
 interface CalculationHistoryProps {
   history: CalculationResult[];
@@ -17,7 +16,7 @@ export const CalculationHistory: React.FC<CalculationHistoryProps> = ({
   onResultSelect,
   onToggleComparison,
 }) => {
-  if (history.length === 0) return null;
+  
 
   return (
     <Card>
@@ -35,7 +34,7 @@ export const CalculationHistory: React.FC<CalculationHistoryProps> = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {history.slice(0, 6).map((result, index) => (
+          {history?.slice(0, 6).map((result, index) => (
             <Card
               key={result.calculationId || index}
               className="cursor-pointer hover:shadow-sm transition-all border-gray-200"
@@ -43,14 +42,18 @@ export const CalculationHistory: React.FC<CalculationHistoryProps> = ({
             >
               <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-medium">Tính toán #{index + 1}</div>
+                  <div className="text-sm font-medium">
+                    Tính toán #{index + 1}
+                  </div>
                   <Badge
                     variant={
-                      (result.steps.dongTienRongBDS || 0) > 0 ? 'default' : 'destructive'
+                      (result.steps.dongTienRongBDS || 0) > 0
+                        ? "default"
+                        : "destructive"
                     }
                     className="text-xs shrink-0"
                   >
-                    {(result.steps.dongTienRongBDS || 0) > 0 ? 'Lời' : 'Lỗ'}
+                    {(result.steps.dongTienRongBDS || 0) > 0 ? "Lời" : "Lỗ"}
                   </Badge>
                 </div>
                 <div className="space-y-1 text-xs">
@@ -58,7 +61,9 @@ export const CalculationHistory: React.FC<CalculationHistoryProps> = ({
                     <span className="text-muted-foreground">ROI:</span>
                     <span
                       className={`font-semibold ${
-                        (result.roiHangNam || 0) > 0 ? 'text-green-600' : 'text-red-600'
+                        (result.roiHangNam || 0) > 0
+                          ? "text-green-600"
+                          : "text-red-600"
                       }`}
                     >
                       {(result.roiHangNam || 0).toFixed(1)}%
@@ -68,14 +73,21 @@ export const CalculationHistory: React.FC<CalculationHistoryProps> = ({
                     <span className="text-muted-foreground">Dòng tiền:</span>
                     <span
                       className={`font-semibold ${
-                        (result.steps.dongTienRongBDS || 0) > 0 ? 'text-green-600' : 'text-red-600'
+                        (result.steps.dongTienRongBDS || 0) > 0
+                          ? "text-green-600"
+                          : "text-red-600"
                       }`}
                     >
-                      {((result.steps.dongTienRongBDS || 0) / 1000000).toFixed(1)}M ₫
+                      {((result.steps.dongTienRongBDS || 0) / 1000000).toFixed(
+                        1
+                      )}
+                      M ₫
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground pt-1 border-t">
-                    {new Date(result.calculatedAt || '').toLocaleDateString('vi-VN')}
+                    {new Date(result.calculatedAt || "").toLocaleDateString(
+                      "vi-VN"
+                    )}
                   </div>
                 </div>
               </CardContent>

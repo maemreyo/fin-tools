@@ -53,131 +53,139 @@ import {
   Lightbulb,
   AlertCircle,
   Info,
+  Clock,
+  Clock4,
+  Timer,
+  CalendarDays,
+  Rocket,
 } from "lucide-react";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 
 import { CalculationResult } from "@/types/real-estate";
+import { CalculationResultWithSale } from "@/types/sale-scenario";
 import { formatVND, formatPercent } from "@/lib/financial-utils";
+import { Label } from "@/components/ui/label";
 
 // ===== ENHANCED INTERFACES =====
 interface EnhancedVisualComparisonProps {
   scenarios: CalculationResult[];
   onSelectScenario?: (scenario: CalculationResult) => void;
   onRemoveScenario?: (index: number) => void;
+  showRecommendation?: boolean; // 🆕 Show overall recommendation
+  comparisonMode?: "standard" | "buy_now_vs_future"; // 🆕 New comparison mode
 }
 
-interface PropertyScore {
-  scenarioIndex: number;
+// ===== ENHANCED SCENARIO PROPERTY INTERFACE =====
+interface EnhancedScenarioProperty {
   scenario: CalculationResult;
-  scores: {
-    profitability: number; // 0-100
-    cashFlow: number; // 0-100
-    risk: number; // 0-100 (higher = safer)
-    financing: number; // 0-100
-    overall: number; // 0-100
-  };
+  scenarioIndex: number;
   rank: number;
-  strengths: HighlightItem[];
-  weaknesses: HighlightItem[];
-  opportunities: HighlightItem[];
-  threats: HighlightItem[];
+  scores: {
+    overall: number;
+    roi: number;
+    cashFlow: number;
+    risk: number;
+  };
+  // 🆕 Enhanced properties for future scenarios
+  scenarioType: "buy_now" | "buy_future" | "standard";
+  purchaseTimingInfo?: {
+    purchaseDate: Date;
+    monthsFromNow?: number;
+    projectionYears?: number;
+  };
+  economicScenarioInfo?: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  projectionSummary?: {
+    propertyValueChange?: number;
+    rentalIncomeChange?: number;
+    interestRateChange?: number;
+    projectionWarnings?: string[];
+  };
+  strengths: Array<{
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    value: string;
+    impact: "high" | "medium" | "low";
+  }>;
+  weaknesses: Array<{
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    value: string;
+    impact: "high" | "medium" | "low";
+  }>;
 }
 
-interface HighlightItem {
-  category: "profitability" | "risk" | "financing" | "timing" | "market";
-  title: string;
-  value: string;
-  description: string;
-  impact: "high" | "medium" | "low";
-  icon: React.ReactNode;
-  color: string;
-}
-
-interface ComparisonMetric {
-  key: string;
-  name: string;
-  category: "financial" | "risk" | "performance";
-  getValue: (scenario: CalculationResult) => number;
-  format: (value: number) => string;
-  higherIsBetter: boolean;
-  description: string;
-  weight: number; // For overall scoring
-}
-
-// ===== COMPARISON METRICS =====
-const COMPARISON_METRICS: ComparisonMetric[] = [
+// ===== ENHANCED COMPARISON METRICS =====
+const ENHANCED_COMPARISON_METRICS = [
   {
-    key: "roi",
+    key: "roiHangNam",
     name: "ROI hàng năm",
     category: "performance",
-    getValue: (s) => s.roiHangNam,
-    format: (v) => formatPercent(v),
+    getValue: (s: CalculationResult) => s.roiHangNam || 0,
+    format: (v: number) => formatPercent(v),
     higherIsBetter: true,
-    description: "Tỷ lệ lợi nhuận trên vốn đầu tư",
+    description: "Tỷ suất lợi nhuận hàng năm",
+    weight: 30,
+  },
+  {
+    key: "dongTienRongBDS",
+    name: "Dòng tiền ròng/tháng",
+    category: "performance",
+    getValue: (s: CalculationResult) => s.steps.dongTienRongBDS || 0,
+    format: (v: number) => formatVND(v),
+    higherIsBetter: true,
+    description: "Dòng tiền ròng hàng tháng từ BĐS",
     weight: 25,
   },
   {
-    key: "cashFlow",
-    name: "Dòng tiền/tháng",
+    key: "tongVonBanDau",
+    name: "Vốn ban đầu",
     category: "financial",
-    getValue: (s) => s.steps.dongTienRongBDS,
-    format: (v) => formatVND(v),
-    higherIsBetter: true,
-    description: "Dòng tiền ròng hàng tháng",
-    weight: 20,
-  },
-  {
-    key: "payback",
-    name: "Thời gian hoàn vốn",
-    category: "performance",
-    getValue: (s) => s.paybackPeriod,
-    format: (v) => (v > 0 ? `${v.toFixed(1)} năm` : "N/A"),
+    getValue: (s: CalculationResult) => s.steps.tongVonBanDau || 0,
+    format: (v: number) => formatVND(v),
     higherIsBetter: false,
-    description: "Thời gian thu hồi vốn đầu tư",
+    description: "Tổng vốn cần đầu tư ban đầu",
     weight: 15,
   },
   {
-    key: "loanRatio",
-    name: "Tỷ lệ vay",
+    key: "paybackPeriod",
+    name: "Thời gian hoàn vốn",
     category: "risk",
-    getValue: (s) => s.inputs.tyLeVay || 0,
-    format: (v) => `${v}%`,
+    getValue: (s: CalculationResult) => s.paybackPeriod || 0,
+    format: (v: number) => (v > 0 ? `${v.toFixed(1)} năm` : "N/A"),
     higherIsBetter: false,
-    description: "Tỷ lệ vay so với giá trị BĐS",
+    description: "Thời gian thu hồi vốn đầu tư",
     weight: 15,
   },
   {
     key: "rentalYield",
     name: "Rental Yield",
     category: "performance",
-    getValue: (s) => s.rentalYield,
-    format: (v) => formatPercent(v),
+    getValue: (s: CalculationResult) => s.rentalYield || 0,
+    format: (v: number) => formatPercent(v),
     higherIsBetter: true,
     description: "Tỷ lệ lợi nhuận từ cho thuê",
     weight: 10,
   },
   {
-    key: "interestRate",
-    name: "Lãi suất sau ưu đãi",
-    category: "financial",
-    getValue: (s) => s.inputs.laiSuatThaNoi || 0,
-    format: (v) => `${v}%`,
-    higherIsBetter: false,
-    description: "Lãi suất thả nổi",
-    weight: 10,
-  },
-  {
-    key: "totalInvestment",
-    name: "Vốn đầu tư",
-    category: "financial",
-    getValue: (s) => s.steps.tongVonBanDau,
-    format: (v) => formatVND(v),
-    higherIsBetter: false,
-    description: "Tổng vốn cần đầu tư ban đầu",
+    key: "netPresentValue",
+    name: "NPV",
+    category: "performance",
+    getValue: (s: CalculationResult) => s.netPresentValue || 0,
+    format: (v: number) => formatVND(v),
+    higherIsBetter: true,
+    description: "Giá trị hiện tại ròng",
     weight: 5,
   },
 ];
 
-// ===== UTILITY FUNCTIONS - FIXED =====
+// ===== UTILITY FUNCTIONS =====
 const safeNumber = (value: any): number => {
   if (value === null || value === undefined || isNaN(value)) return 0;
   return Number(value) || 0;
@@ -193,10 +201,59 @@ const formatSafeVND = (value: any): string => {
   return formatVND(num);
 };
 
-const formatSafeLoanRatio = (value: any): string => {
-  const num = safeNumber(value);
-  if (num === 0) return "0%"; // Handle case where no loan ratio is set
-  return `${num.toFixed(1)}%`;
+// 🆕 Get scenario type from enhanced metadata
+const getScenarioType = (
+  scenario: CalculationResult
+): "buy_now" | "buy_future" | "standard" => {
+  if (scenario.scenarioType) {
+    return scenario.scenarioType;
+  }
+
+  // Fallback detection based on scenario name or other properties
+  if (
+    scenario.purchaseTimingInfo?.monthsFromNow &&
+    scenario.purchaseTimingInfo.monthsFromNow > 0
+  ) {
+    return "buy_future";
+  }
+
+  if (
+    scenario.scenarioName?.toLowerCase().includes("mua ngay") ||
+    scenario.scenarioName?.toLowerCase().includes("buy now")
+  ) {
+    return "buy_now";
+  }
+
+  return "standard";
+};
+
+// 🆕 Get scenario type badge
+const getScenarioTypeBadge = (
+  scenarioType: "buy_now" | "buy_future" | "standard"
+) => {
+  switch (scenarioType) {
+    case "buy_now":
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-300">
+          <Zap className="h-3 w-3 mr-1" />
+          Mua Ngay
+        </Badge>
+      );
+    case "buy_future":
+      return (
+        <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+          <Clock className="h-3 w-3 mr-1" />
+          Mua Tương Lai
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline">
+          <BarChart3 className="h-3 w-3 mr-1" />
+          Kịch Bản
+        </Badge>
+      );
+  }
 };
 
 // ===== MAIN COMPONENT =====
@@ -204,6 +261,8 @@ export default function EnhancedVisualComparison({
   scenarios,
   onSelectScenario,
   onRemoveScenario,
+  showRecommendation = true,
+  comparisonMode = "standard",
 }: EnhancedVisualComparisonProps) {
   const [sortBy, setSortBy] = useState<"overall" | "roi" | "cashFlow" | "risk">(
     "overall"
@@ -211,232 +270,190 @@ export default function EnhancedVisualComparison({
   const [showDetails, setShowDetails] = useState<{ [key: number]: boolean }>(
     {}
   );
-  const [selectedMetric, setSelectedMetric] = useState<string>("roi");
 
-  // ===== SCORING SYSTEM =====
-  // ===== FIXED SCORING SYSTEM =====
-  const propertyScores = useMemo((): PropertyScore[] => {
-    if (scenarios.length === 0) return [];
+  // ===== ENHANCED SCENARIO ANALYSIS =====
+  const enhancedProperties = useMemo((): EnhancedScenarioProperty[] => {
+    return scenarios.map((scenario, index) => {
+      const scenarioType = getScenarioType(scenario);
 
-    const scores = scenarios.map((scenario, index) => {
-      // FIXED: Safe number extraction with proper defaults
-      const roiValue = safeNumber(scenario.roiHangNam);
-      const cashFlowValue = safeNumber(scenario.steps?.dongTienRongBDS);
-      const loanRatioValue = safeNumber(scenario.inputs?.tyLeVay);
-      const interestRateValue =
-        safeNumber(scenario.inputs?.laiSuatThaNoi) || 10; // Default 10% if not set
-      const rentalYieldValue = safeNumber(scenario.rentalYield);
-      const paybackValue = safeNumber(scenario.paybackPeriod);
-
-      // Calculate individual scores (0-100) with proper bounds
-      const profitability = Math.min(100, Math.max(0, roiValue * 5)); // 20% ROI = 100 points
-      const cashFlow = Math.min(
+      // Calculate scores
+      const roiScore = Math.min(
         100,
-        Math.max(0, (cashFlowValue + 5000000) / 100000)
-      ); // 5M+ = good
-      const risk = Math.min(100, Math.max(0, 100 - loanRatioValue)); // Lower loan ratio = safer
-      const financing = Math.min(100, Math.max(0, 100 - interestRateValue * 5)); // Lower interest = better
+        Math.max(0, (scenario.roiHangNam || 0) * 5)
+      );
+      const cashFlowScore = Math.min(
+        100,
+        Math.max(0, 50 + ((scenario.steps.dongTienRongBDS || 0) / 1000000) * 10)
+      );
+      const riskScore =
+        100 -
+        Math.min(
+          100,
+          Math.max(
+            0,
+            (scenario.inputs.tyLeVay || 0) + (scenario.paybackPeriod || 0) * 5
+          )
+        );
+      const overallScore =
+        roiScore * 0.4 + cashFlowScore * 0.3 + riskScore * 0.3;
 
-      const overall =
-        profitability * 0.3 + cashFlow * 0.25 + risk * 0.25 + financing * 0.2;
+      // Generate strengths and weaknesses
+      const strengths = [];
+      const weaknesses = [];
 
-      // ===== FIXED SWOT ANALYSIS =====
-      const strengths: HighlightItem[] = [];
-      const weaknesses: HighlightItem[] = [];
-      const opportunities: HighlightItem[] = [];
-      const threats: HighlightItem[] = [];
-
-      // Profitability Analysis - FIXED
-      if (roiValue > 15) {
+      // ROI Analysis
+      if ((scenario.roiHangNam || 0) > 15) {
         strengths.push({
-          category: "profitability",
-          title: "ROI xuất sắc",
-          value: formatSafePercent(roiValue),
-          description: "Tỷ suất lợi nhuận vượt trội so với thị trường",
-          impact: "high",
-          icon: <Crown className="h-4 w-4" />,
-          color: "text-yellow-600 bg-yellow-50",
+          icon: <TrendingUp className="h-4 w-4 text-green-600" />,
+          title: "ROI cao",
+          description: "Tỷ suất lợi nhuận vượt trội",
+          value: formatPercent(scenario.roiHangNam || 0),
+          impact: "high" as const,
         });
-      } else if (roiValue < 8 && roiValue > 0) {
+      } else if ((scenario.roiHangNam || 0) < 8) {
         weaknesses.push({
-          category: "profitability",
+          icon: <TrendingDown className="h-4 w-4 text-red-600" />,
           title: "ROI thấp",
-          value: formatSafePercent(roiValue),
-          description: "Tỷ suất lợi nhuận dưới mức kỳ vọng",
-          impact: "high",
-          icon: <TrendingDown className="h-4 w-4" />,
-          color: "text-red-600 bg-red-50",
+          description: "Tỷ suất lợi nhuận dưới kỳ vọng",
+          value: formatPercent(scenario.roiHangNam || 0),
+          impact: "high" as const,
         });
       }
 
-      // Cash Flow Analysis - FIXED
-      if (cashFlowValue > 3000000) {
+      // Cash Flow Analysis
+      if ((scenario.steps.dongTienRongBDS || 0) > 5000000) {
         strengths.push({
-          category: "profitability",
+          icon: <DollarSign className="h-4 w-4 text-green-600" />,
           title: "Dòng tiền tích cực",
-          value: formatSafeVND(cashFlowValue),
-          description: "Tạo dòng tiền ổn định hàng tháng",
-          impact: "high",
-          icon: <TrendingUp className="h-4 w-4" />,
-          color: "text-green-600 bg-green-50",
+          description: "Dòng tiền ròng hàng tháng tốt",
+          value: formatVND(scenario.steps.dongTienRongBDS || 0),
+          impact: "medium" as const,
         });
-      } else if (cashFlowValue < 0) {
-        threats.push({
-          category: "profitability",
+      } else if ((scenario.steps.dongTienRongBDS || 0) < 0) {
+        weaknesses.push({
+          icon: <AlertTriangle className="h-4 w-4 text-red-600" />,
           title: "Dòng tiền âm",
-          value: formatSafeVND(cashFlowValue),
-          description: "Cần bổ sung tiền hàng tháng",
-          impact: "high",
-          icon: <AlertTriangle className="h-4 w-4" />,
-          color: "text-red-600 bg-red-50",
+          description: "Cần bù thêm tiền hàng tháng",
+          value: formatVND(scenario.steps.dongTienRongBDS || 0),
+          impact: "high" as const,
         });
       }
 
-      // Risk Analysis - FIXED with proper loan ratio handling
-      if (loanRatioValue <= 70 && loanRatioValue > 0) {
-        strengths.push({
-          category: "risk",
-          title: "Rủi ro thấp",
-          value: formatSafeLoanRatio(loanRatioValue),
-          description: "Tỷ lệ vay an toàn, ít rủi ro thanh khoản",
-          impact: "medium",
-          icon: <Shield className="h-4 w-4" />,
-          color: "text-blue-600 bg-blue-50",
-        });
-      } else if (loanRatioValue > 85) {
-        threats.push({
-          category: "risk",
-          title: "Rủi ro cao",
-          value: formatSafeLoanRatio(loanRatioValue),
-          description: "Tỷ lệ vay cao, rủi ro thanh khoản",
-          impact: "high",
-          icon: <AlertTriangle className="h-4 w-4" />,
-          color: "text-red-600 bg-red-50",
-        });
-      } else if (loanRatioValue === 0) {
-        // Special case: No loan needed
-        strengths.push({
-          category: "risk",
-          title: "Không cần vay",
-          value: "0% vay",
-          description: "Mua toàn bộ bằng vốn tự có, không rủi ro vay",
-          impact: "high",
-          icon: <Star className="h-4 w-4" />,
-          color: "text-green-600 bg-green-50",
-        });
-      }
-
-      // Financing Analysis - FIXED
-      if (interestRateValue <= 9) {
-        opportunities.push({
-          category: "financing",
-          title: "Lãi suất tốt",
-          value: formatSafePercent(interestRateValue),
-          description: "Lãi suất cạnh tranh, tiết kiệm chi phí",
-          impact: "medium",
-          icon: <Percent className="h-4 w-4" />,
-          color: "text-green-600 bg-green-50",
-        });
-      } else if (interestRateValue > 12) {
+      // Risk Analysis
+      if ((scenario.inputs.tyLeVay || 0) > 80) {
         weaknesses.push({
-          category: "financing",
-          title: "Lãi suất cao",
-          value: formatSafePercent(interestRateValue),
-          description: "Lãi suất cao, tăng chi phí vay",
-          impact: "medium",
-          icon: <TrendingUp className="h-4 w-4" />,
-          color: "text-orange-600 bg-orange-50",
-        });
-      }
-
-      // Payback Analysis - FIXED
-      if (paybackValue > 0 && paybackValue <= 8) {
-        strengths.push({
-          category: "timing",
-          title: "Hoàn vốn nhanh",
-          value: `${paybackValue.toFixed(1)} năm`,
-          description: "Thời gian thu hồi vốn hợp lý",
-          impact: "medium",
-          icon: <Calendar className="h-4 w-4" />,
-          color: "text-green-600 bg-green-50",
-        });
-      } else if (paybackValue > 15) {
-        weaknesses.push({
-          category: "timing",
-          title: "Hoàn vốn chậm",
-          value: `${paybackValue.toFixed(1)} năm`,
-          description: "Thời gian thu hồi vốn dài",
-          impact: "medium",
-          icon: <Calendar className="h-4 w-4" />,
-          color: "text-orange-600 bg-orange-50",
-        });
-      }
-
-      // Market opportunities - FIXED
-      if (rentalYieldValue > 8) {
-        opportunities.push({
-          category: "market",
-          title: "Rental yield cao",
-          value: formatSafePercent(rentalYieldValue),
-          description: "Tỷ lệ lợi nhuận từ cho thuê tốt",
-          impact: "medium",
-          icon: <Home className="h-4 w-4" />,
-          color: "text-blue-600 bg-blue-50",
+          icon: <AlertCircle className="h-4 w-4 text-orange-600" />,
+          title: "Đòn bẩy cao",
+          description: "Tỷ lệ vay cao, rủi ro lớn",
+          value: `${scenario.inputs.tyLeVay}%`,
+          impact: "medium" as const,
         });
       }
 
       return {
-        scenarioIndex: index,
         scenario,
+        scenarioIndex: index,
+        rank: 0, // Will be calculated later
         scores: {
-          profitability,
-          cashFlow,
-          risk,
-          financing,
-          overall,
+          overall: overallScore,
+          roi: roiScore,
+          cashFlow: cashFlowScore,
+          risk: riskScore,
         },
-        rank: 0, // Will be calculated after sorting
+        scenarioType,
+        purchaseTimingInfo: scenario.purchaseTimingInfo,
+        economicScenarioInfo: scenario.economicScenarioApplied,
+        projectionSummary: {
+          // Extract from future scenario if available
+          propertyValueChange: (scenario as any).projectionSummary
+            ?.propertyValueChange,
+          rentalIncomeChange: (scenario as any).projectionSummary
+            ?.rentalIncomeChange,
+          interestRateChange: (scenario as any).projectionSummary
+            ?.interestRateChange,
+          projectionWarnings: (scenario as any).projectionSummary
+            ?.projectionWarnings,
+        },
         strengths,
         weaknesses,
-        opportunities,
-        threats,
       };
     });
-
-    // Calculate ranks
-    const sortedScores = [...scores].sort(
-      (a, b) => b.scores.overall - a.scores.overall
-    );
-    sortedScores.forEach((score, index) => {
-      score.rank = index + 1;
-    });
-
-    return scores;
   }, [scenarios]);
 
-  // ===== SORTED PROPERTIES =====
+  // ===== RANKING =====
   const sortedProperties = useMemo(() => {
-    const sorted = [...propertyScores];
-    switch (sortBy) {
-      case "overall":
-        return sorted.sort((a, b) => b.scores.overall - a.scores.overall);
-      case "roi":
-        return sorted.sort(
-          (a, b) => b.scenario.roiHangNam - a.scenario.roiHangNam
-        );
-      case "cashFlow":
-        return sorted.sort(
-          (a, b) =>
-            b.scenario.steps.dongTienRongBDS - a.scenario.steps.dongTienRongBDS
-        );
-      case "risk":
-        return sorted.sort((a, b) => b.scores.risk - a.scores.risk);
-      default:
-        return sorted;
-    }
-  }, [propertyScores, sortBy]);
+    const sorted = [...enhancedProperties].sort((a, b) => {
+      const sortKey =
+        sortBy === "overall"
+          ? "overall"
+          : sortBy === "roi"
+          ? "roi"
+          : sortBy === "cashFlow"
+          ? "cashFlow"
+          : "risk";
+      return b.scores[sortKey] - a.scores[sortKey];
+    });
 
-  // ===== UTILITY FUNCTIONS =====
+    // Assign ranks
+    return sorted.map((property, index) => ({
+      ...property,
+      rank: index + 1,
+    }));
+  }, [enhancedProperties, sortBy]);
+
+  // ===== BUY NOW VS FUTURE ANALYSIS =====
+  const buyNowVsFutureAnalysis = useMemo(() => {
+    if (comparisonMode !== "buy_now_vs_future") return null;
+
+    const buyNowScenarios = sortedProperties.filter(
+      (p) => p.scenarioType === "buy_now"
+    );
+    const buyFutureScenarios = sortedProperties.filter(
+      (p) => p.scenarioType === "buy_future"
+    );
+
+    if (buyNowScenarios.length === 0 && buyFutureScenarios.length === 0)
+      return null;
+
+    const bestBuyNow = buyNowScenarios[0];
+    const bestBuyFuture = buyFutureScenarios[0];
+
+    let recommendation = "";
+    let recommendedStrategy: "buy_now" | "buy_future" | "mixed" = "mixed";
+
+    if (bestBuyNow && bestBuyFuture) {
+      if (bestBuyNow.scores.overall > bestBuyFuture.scores.overall) {
+        recommendation = `Mua ngay có lợi hơn với điểm số ${bestBuyNow.scores.overall.toFixed(
+          0
+        )} so với ${bestBuyFuture.scores.overall.toFixed(0)}`;
+        recommendedStrategy = "buy_now";
+      } else {
+        recommendation = `Mua tương lai có lợi hơn với điểm số ${bestBuyFuture.scores.overall.toFixed(
+          0
+        )} so với ${bestBuyNow.scores.overall.toFixed(0)}`;
+        recommendedStrategy = "buy_future";
+      }
+    } else if (bestBuyNow && !bestBuyFuture) {
+      recommendation =
+        "Chỉ có kịch bản mua ngay - cần tạo kịch bản mua tương lai để so sánh";
+      recommendedStrategy = "buy_now";
+    } else if (!bestBuyNow && bestBuyFuture) {
+      recommendation =
+        "Chỉ có kịch bản mua tương lai - cần tạo kịch bản mua ngay để so sánh";
+      recommendedStrategy = "buy_future";
+    }
+
+    return {
+      buyNowScenarios,
+      buyFutureScenarios,
+      bestBuyNow,
+      bestBuyFuture,
+      recommendation,
+      recommendedStrategy,
+    };
+  }, [sortedProperties, comparisonMode]);
+
+  // ===== HELPER FUNCTIONS =====
   const getScoreColor = (score: number): string => {
     if (score >= 80) return "text-green-600 bg-green-50";
     if (score >= 60) return "text-blue-600 bg-blue-50";
@@ -483,6 +500,7 @@ export default function EnhancedVisualComparison({
     }));
   };
 
+  // ===== RENDER =====
   if (scenarios.length === 0) {
     return (
       <Card>
@@ -490,7 +508,9 @@ export default function EnhancedVisualComparison({
           <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="font-medium mb-2">Chưa có dữ liệu so sánh</h3>
           <p className="text-sm text-muted-foreground">
-            Tạo ít nhất 2 kịch bản để thấy so sánh chi tiết
+            {comparisonMode === "buy_now_vs_future"
+              ? 'Tạo kịch bản "Mua Ngay" và "Mua Tương Lai" để thấy so sánh chi tiết'
+              : "Tạo ít nhất 2 kịch bản để thấy so sánh chi tiết"}
           </p>
         </CardContent>
       </Card>
@@ -500,314 +520,300 @@ export default function EnhancedVisualComparison({
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* Header Controls - Same as before */}
+        {/* Header Controls */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                {comparisonMode === "buy_now_vs_future"
+                  ? "So Sánh Mua Ngay vs Mua Tương Lai"
+                  : "So Sánh Kịch Bản"}
+                <Badge variant="outline">{scenarios.length} kịch bản</Badge>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Sắp xếp theo:</Label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value: any) => setSortBy(value)}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="overall">Điểm tổng</SelectItem>
+                    <SelectItem value="roi">ROI</SelectItem>
+                    <SelectItem value="cashFlow">Dòng tiền</SelectItem>
+                    <SelectItem value="risk">Rủi ro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
 
-        {/* ===== FIXED COMPARISON CARDS ===== */}
+        {/* Buy Now vs Future Summary */}
+        {comparisonMode === "buy_now_vs_future" && buyNowVsFutureAnalysis && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Tóm Tắt So Sánh
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {buyNowVsFutureAnalysis.buyNowScenarios.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Kịch bản Mua Ngay
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {buyNowVsFutureAnalysis.buyFutureScenarios.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Kịch bản Mua Tương Lai
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-medium">
+                    {buyNowVsFutureAnalysis.recommendedStrategy === "buy_now"
+                      ? "🚀 Mua Ngay"
+                      : buyNowVsFutureAnalysis.recommendedStrategy ===
+                        "buy_future"
+                      ? "⏰ Mua Tương Lai"
+                      : "🤔 Cần phân tích thêm"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Khuyến nghị
+                  </div>
+                </div>
+              </div>
+
+              {buyNowVsFutureAnalysis.recommendation && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm font-medium text-blue-800">
+                    💡 {buyNowVsFutureAnalysis.recommendation}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Comparison Cards */}
         <div className="space-y-4">
           {sortedProperties.map((property, index) => (
             <Card
               key={property.scenarioIndex}
               className={`transition-all hover:shadow-lg ${
                 property.rank === 1
-                  ? "ring-2 ring-yellow-200 bg-yellow-50/30"
+                  ? "ring-2 ring-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50"
                   : ""
               }`}
             >
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${getScoreColor(
-                        property.scores.overall
-                      )}`}
-                    >
-                      {getScoreIcon(property.scores.overall)}
+              <CardContent className="p-6">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg">
+                        {property.scenario.scenarioName ||
+                          `Kịch bản ${property.scenarioIndex + 1}`}
+                      </h3>
+                      {getRankBadge(property.rank)}
+                      {getScenarioTypeBadge(property.scenarioType)}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">
-                          {property.scenario.scenarioName ||
-                            `Kịch bản ${property.scenarioIndex + 1}`}
-                        </h3>
-                        {getRankBadge(property.rank)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {formatSafeVND(property.scenario.inputs?.giaTriBDS)} •
-                        {formatSafeVND(property.scenario.inputs?.vonTuCo)} vốn
-                        tự có
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">
-                      {property.scores.overall.toFixed(0)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Điểm tổng
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* ===== FIXED KEY METRICS ===== */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-lg font-bold text-blue-600">
-                      {formatSafePercent(property.scenario.roiHangNam)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">ROI/năm</div>
-                    <div className="text-xs text-blue-600">
-                      {property.scores.profitability.toFixed(0)}/100
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-lg font-bold text-green-600">
-                      {formatSafeVND(property.scenario.steps?.dongTienRongBDS)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Dòng tiền
-                    </div>
-                    <div className="text-xs text-green-600">
-                      {property.scores.cashFlow.toFixed(0)}/100
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <div className="text-lg font-bold text-purple-600">
-                      {formatSafeLoanRatio(property.scenario.inputs?.tyLeVay)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Tỷ lệ vay
-                    </div>
-                    <div className="text-xs text-purple-600">
-                      {property.scores.risk.toFixed(0)}/100
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-orange-50 rounded-lg">
-                    <div className="text-lg font-bold text-orange-600">
-                      {formatSafePercent(
-                        property.scenario.inputs?.laiSuatThaNoi
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Lãi suất
-                    </div>
-                    <div className="text-xs text-orange-600">
-                      {property.scores.financing.toFixed(0)}/100
-                    </div>
-                  </div>
-                </div>
-
-                {/* ===== FIXED SWOT ANALYSIS PREVIEW ===== */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Strengths */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <ThumbsUp className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">
-                        Ưu điểm
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {property.strengths.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      {property.strengths.slice(0, 2).map((strength, i) => (
-                        <div
-                          key={i}
-                          className={`p-2 rounded text-xs ${strength.color}`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {strength.icon}
-                            <span className="font-medium">
-                              {strength.title}
-                            </span>
-                          </div>
-                          <div className="text-xs opacity-75">
-                            {strength.value}
-                          </div>
-                        </div>
-                      ))}
-                      {property.strengths.length === 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Chưa có ưu điểm nổi bật
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Weaknesses */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <ThumbsDown className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">
-                        Nhược điểm
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {property.weaknesses.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      {property.weaknesses.slice(0, 2).map((weakness, i) => (
-                        <div
-                          key={i}
-                          className={`p-2 rounded text-xs ${weakness.color}`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {weakness.icon}
-                            <span className="font-medium">
-                              {weakness.title}
-                            </span>
-                          </div>
-                          <div className="text-xs opacity-75">
-                            {weakness.value}
-                          </div>
-                        </div>
-                      ))}
-                      {property.weaknesses.length === 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Không có nhược điểm đáng kể
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Opportunities */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-600">
-                        Cơ hội
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {property.opportunities.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      {property.opportunities
-                        .slice(0, 2)
-                        .map((opportunity, i) => (
-                          <div
-                            key={i}
-                            className={`p-2 rounded text-xs ${opportunity.color}`}
-                          >
-                            <div className="flex items-center gap-1">
-                              {opportunity.icon}
-                              <span className="font-medium">
-                                {opportunity.title}
+                    {/* 🆕 Enhanced Scenario Info */}
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                      {/* Purchase Timing Info */}
+                      {property.purchaseTimingInfo && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {property.scenarioType === "buy_future" ? (
+                            <>
+                              {format(
+                                property.purchaseTimingInfo.purchaseDate,
+                                "dd/MM/yyyy",
+                                { locale: vi }
+                              )}
+                              <span className="text-blue-600">
+                                ({property.purchaseTimingInfo.monthsFromNow}{" "}
+                                tháng nữa)
                               </span>
-                            </div>
-                            <div className="text-xs opacity-75">
-                              {opportunity.value}
-                            </div>
-                          </div>
-                        ))}
-                      {property.opportunities.length === 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Chưa xác định cơ hội
+                            </>
+                          ) : (
+                            "Mua ngay"
+                          )}
+                        </div>
+                      )}
+
+                      {/* Economic Scenario Info */}
+                      {property.economicScenarioInfo && (
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-4 w-4" />
+                          <span>{property.economicScenarioInfo.name}</span>
                         </div>
                       )}
                     </div>
+
+                    {/* 🆕 Projection Summary for Future Scenarios */}
+                    {property.scenarioType === "buy_future" &&
+                      property.projectionSummary && (
+                        <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                          <div className="flex flex-wrap gap-3">
+                            {property.projectionSummary.propertyValueChange !==
+                              undefined && (
+                              <span
+                                className={`flex items-center gap-1 ${
+                                  property.projectionSummary
+                                    .propertyValueChange > 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                <Home className="h-3 w-3" />
+                                Giá BĐS:{" "}
+                                {property.projectionSummary
+                                  .propertyValueChange > 0
+                                  ? "+"
+                                  : ""}
+                                {property.projectionSummary.propertyValueChange.toFixed(
+                                  1
+                                )}
+                                %
+                              </span>
+                            )}
+                            {property.projectionSummary.rentalIncomeChange !==
+                              undefined && (
+                              <span
+                                className={`flex items-center gap-1 ${
+                                  property.projectionSummary
+                                    .rentalIncomeChange > 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                <DollarSign className="h-3 w-3" />
+                                Tiền thuê:{" "}
+                                {property.projectionSummary.rentalIncomeChange >
+                                0
+                                  ? "+"
+                                  : ""}
+                                {property.projectionSummary.rentalIncomeChange.toFixed(
+                                  1
+                                )}
+                                %
+                              </span>
+                            )}
+                            {property.projectionSummary.interestRateChange !==
+                              undefined && (
+                              <span
+                                className={`flex items-center gap-1 ${
+                                  property.projectionSummary
+                                    .interestRateChange > 0
+                                    ? "text-red-600"
+                                    : "text-green-600"
+                                }`}
+                              >
+                                <Percent className="h-3 w-3" />
+                                Lãi suất:{" "}
+                                {property.projectionSummary.interestRateChange >
+                                0
+                                  ? "+"
+                                  : ""}
+                                {property.projectionSummary.interestRateChange.toFixed(
+                                  1
+                                )}
+                                % points
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                   </div>
 
-                  {/* Threats */}
-                  <div className="space-y-2">
+                  {/* Score Card */}
+                  <div
+                    className={`p-3 rounded-lg ${getScoreColor(
+                      property.scores.overall
+                    )}`}
+                  >
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-600">
-                        Rủi ro
+                      {getScoreIcon(property.scores.overall)}
+                      <span className="font-bold text-lg">
+                        {property.scores.overall.toFixed(0)}
                       </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {property.threats.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
-                      {property.threats.slice(0, 2).map((threat, i) => (
-                        <div
-                          key={i}
-                          className={`p-2 rounded text-xs ${threat.color}`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {threat.icon}
-                            <span className="font-medium">{threat.title}</span>
-                          </div>
-                          <div className="text-xs opacity-75">
-                            {threat.value}
-                          </div>
-                        </div>
-                      ))}
-                      {property.threats.length === 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Rủi ro thấp
-                        </div>
-                      )}
+                      <span className="text-sm font-medium">/100</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Score Breakdown - FIXED */}
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-3">Phân tích điểm số</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Khả năng sinh lời</span>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={property.scores.profitability}
-                          className="w-24 h-2"
-                        />
-                        <span className="text-sm font-medium w-10">
-                          {property.scores.profitability.toFixed(0)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Dòng tiền</span>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={property.scores.cashFlow}
-                          className="w-24 h-2"
-                        />
-                        <span className="text-sm font-medium w-10">
-                          {property.scores.cashFlow.toFixed(0)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Độ an toàn</span>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={property.scores.risk}
-                          className="w-24 h-2"
-                        />
-                        <span className="text-sm font-medium w-10">
-                          {property.scores.risk.toFixed(0)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Điều kiện vay</span>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={property.scores.financing}
-                          className="w-24 h-2"
-                        />
-                        <span className="text-sm font-medium w-10">
-                          {property.scores.financing.toFixed(0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                {/* Key Metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  {ENHANCED_COMPARISON_METRICS.slice(0, 4).map((metric) => {
+                    const value = metric.getValue(property.scenario);
+                    return (
+                      <Tooltip key={metric.key}>
+                        <TooltipTrigger asChild>
+                          <div className="text-center p-3 bg-gray-50 rounded">
+                            <div className="font-semibold text-sm">
+                              {metric.format(value)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {metric.name}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{metric.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
 
-                {/* Action Buttons - Same as before */}
-                <div className="flex items-center justify-between pt-2">
+                {/* Score Breakdown */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>ROI Score</span>
+                    <span className="font-medium">
+                      {property.scores.roi.toFixed(0)}/100
+                    </span>
+                  </div>
+                  <Progress value={property.scores.roi} className="h-1" />
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Cash Flow Score</span>
+                    <span className="font-medium">
+                      {property.scores.cashFlow.toFixed(0)}/100
+                    </span>
+                  </div>
+                  <Progress value={property.scores.cashFlow} className="h-1" />
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Risk Score</span>
+                    <span className="font-medium">
+                      {property.scores.risk.toFixed(0)}/100
+                    </span>
+                  </div>
+                  <Progress value={property.scores.risk} className="h-1" />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => toggleDetails(property.scenarioIndex)}
+                    className="flex items-center gap-2"
                   >
-                    <Eye className="h-4 w-4 mr-2" />
+                    <Eye className="h-4 w-4" />
                     {showDetails[property.scenarioIndex]
                       ? "Ẩn chi tiết"
                       : "Xem chi tiết"}
@@ -834,7 +840,7 @@ export default function EnhancedVisualComparison({
                   </div>
                 </div>
 
-                {/* Detailed Analysis (Collapsible) - Same structure but with fixed data */}
+                {/* Detailed Analysis (Collapsible) */}
                 {showDetails[property.scenarioIndex] && (
                   <div className="mt-4 p-4 border rounded-lg bg-white">
                     <h4 className="font-medium mb-3">
@@ -913,50 +919,91 @@ export default function EnhancedVisualComparison({
           ))}
         </div>
 
-        {/* Summary - FIXED */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="font-medium mb-2">🎯 Kết luận</h3>
-              {sortedProperties.length > 0 ? (
-                <p className="text-sm text-muted-foreground mb-4">
-                  Kịch bản{" "}
-                  <strong>
-                    {sortedProperties[0]?.scenario.scenarioName || "Tốt nhất"}
-                  </strong>{" "}
-                  có điểm số cao nhất (
-                  {sortedProperties[0]?.scores.overall.toFixed(0)}/100) với{" "}
-                  {sortedProperties[0]?.strengths.length} ưu điểm nổi bật.
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground mb-4">
-                  Chưa có kịch bản nào để so sánh.
-                </p>
-              )}
-              <div className="flex justify-center gap-2">
-                <Badge className="bg-green-100 text-green-800">
-                  {
-                    sortedProperties.filter((p) => p.scores.overall >= 70)
-                      .length
-                  }{" "}
-                  kịch bản tốt
-                </Badge>
-                <Badge className="bg-yellow-100 text-yellow-800">
-                  {
-                    sortedProperties.filter(
-                      (p) => p.scores.overall >= 50 && p.scores.overall < 70
-                    ).length
-                  }{" "}
-                  kịch bản khá
-                </Badge>
-                <Badge className="bg-red-100 text-red-800">
-                  {sortedProperties.filter((p) => p.scores.overall < 50).length}{" "}
-                  kịch bản cần cải thiện
-                </Badge>
+        {/* Summary & Recommendation */}
+        {showRecommendation && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <h3 className="font-medium mb-2">🎯 Kết luận</h3>
+                {sortedProperties.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Kịch bản{" "}
+                      <strong>
+                        {sortedProperties[0]?.scenario.scenarioName ||
+                          "Tốt nhất"}
+                      </strong>{" "}
+                      có điểm số cao nhất (
+                      {sortedProperties[0]?.scores.overall.toFixed(0)}/100) với{" "}
+                      {sortedProperties[0]?.strengths.length} ưu điểm nổi bật.
+                    </p>
+
+                    {/* Enhanced recommendation for buy now vs future */}
+                    {comparisonMode === "buy_now_vs_future" &&
+                      buyNowVsFutureAnalysis && (
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <h4 className="font-medium text-blue-800 mb-2">
+                            🔮 Khuyến nghị đầu tư
+                          </h4>
+                          <p className="text-sm text-blue-700">
+                            {buyNowVsFutureAnalysis.recommendation}
+                          </p>
+
+                          {buyNowVsFutureAnalysis.bestBuyNow &&
+                            buyNowVsFutureAnalysis.bestBuyFuture && (
+                              <div className="grid grid-cols-2 gap-4 mt-3 text-xs">
+                                <div>
+                                  <div className="font-medium">
+                                    Mua Ngay (Tốt nhất):
+                                  </div>
+                                  <div>
+                                    ROI:{" "}
+                                    {formatPercent(
+                                      buyNowVsFutureAnalysis.bestBuyNow.scenario
+                                        .roiHangNam || 0
+                                    )}
+                                  </div>
+                                  <div>
+                                    Dòng tiền:{" "}
+                                    {formatVND(
+                                      buyNowVsFutureAnalysis.bestBuyNow.scenario
+                                        .steps.dongTienRongBDS || 0
+                                    )}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    Mua Tương Lai (Tốt nhất):
+                                  </div>
+                                  <div>
+                                    ROI:{" "}
+                                    {formatPercent(
+                                      buyNowVsFutureAnalysis.bestBuyFuture
+                                        .scenario.roiHangNam || 0
+                                    )}
+                                  </div>
+                                  <div>
+                                    Dòng tiền:{" "}
+                                    {formatVND(
+                                      buyNowVsFutureAnalysis.bestBuyFuture
+                                        .scenario.steps.dongTienRongBDS || 0
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                        </div>
+                      )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Chưa có kịch bản nào để so sánh.
+                  </p>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </TooltipProvider>
   );
